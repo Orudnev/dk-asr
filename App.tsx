@@ -29,7 +29,7 @@ function App(): React.JSX.Element {
     VoskAsr.configure({
       models: {
         ru: 'vosk-model-small-ru-0.22',
-        en: 'vosk-model-small-en-us-0.15',
+        // en: 'vosk-model-small-en-us-0.15',
       },
     }).catch(error => {
       setStatus(`Configure failed: ${String(error)}`);
