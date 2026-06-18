@@ -1,188 +1,92 @@
-import React, {useEffect, useState} from 'react';
-import {
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
-import VoskAsr from 'react-native-vosk-asr';
+import { View, useColorScheme, useWindowDimensions } from 'react-native';
+import { useEffect, useMemo, useState, createContext } from 'react';
+import { BottomNavigation, MD3DarkTheme, PaperProvider } from 'react-native-paper';
+import PgPurchases from './Src/Pages/PgPurchases';
+import PgSettings from './Src/Pages/PgSettings';
+import { RegisterDebugAPI } from './Src/debug/debug';
 
-type Language = 'ru' | 'en';
-type EventType = 'partial' | 'final';
-
-type AsrEvent = {
-  language: Language;
-  type: EventType;
-  text: string;
+export type TPages = 'purchases' | 'settings';
+type AppContextType = {
+    currPage: TPages;
+    setCurrPage: (page: TPages) => void | Promise<void>;
 };
+export const AppContext = createContext<AppContextType | null>(null);
+type AppRoute = {
+    key: TPages;
+    title: string;
+    focusedIcon: string;
+};
+const APP_ROUTES: AppRoute[] = [
+    { key: 'purchases', title: 'Purchases', focusedIcon: 'account-voice' },
+    { key: 'settings', title: 'Settings', focusedIcon: 'cog-outline' }
+];
 
-function App(): React.JSX.Element {
-  const [activeLanguage, setActiveLanguage] = useState<Language | null>(null);
-  const [status, setStatus] = useState('Idle');
-  const [partialText, setPartialText] = useState('');
-  const [finalText, setFinalText] = useState('');
 
-  useEffect(() => {
-    VoskAsr.configure({
-      models: {
-        ru: 'vosk-model-small-ru-0.22',
-        // en: 'vosk-model-small-en-us-0.15',
-      },
-    }).catch(error => {
-      setStatus(`Configure failed: ${String(error)}`);
-    });
+export default function App() {
+    const [currPage, setCurrPage] = useState<TPages>('purchases');
+    const isDark = useColorScheme() === 'dark';
+    const navigationIndex = useMemo(
+        () => {
+            const index = APP_ROUTES.findIndex(route => route.key === currPage);
+            return index >= 0 ? index : 0;
+        },
+        [currPage],
+    );
+    useEffect(() => {
+        RegisterDebugAPI();
+    }, []);
 
-    const unsubscribe = VoskAsr.subscribeResults((event: AsrEvent) => {
-      if (event.type === 'partial') {
-        setPartialText(event.text);
-      } else {
-        setFinalText(current =>
-          current ? `${current}\n${event.language}: ${event.text}` : `${event.language}: ${event.text}`,
-        );
-        setPartialText('');
-      }
-    });
+    async function handlePageChange(nextPage: TPages) {
+        if (currPage === nextPage) {
+            return;
+        }
 
-    return unsubscribe;
-  }, []);
+        if (currPage === 'settings') {
+            try {
+                //await saveAppSettingsToDb();
+            } catch (err) {
+                console.warn('Failed to save app settings', err);
+            }
+        }
 
-  async function startRecognition(language: Language) {
-    try {
-      setStatus(`Requesting permission for ${language}...`);
-      const granted = await VoskAsr.requestPermission();
-      if (!granted) {
-        setStatus('Microphone permission denied');
-        return;
-      }
-
-      setStatus(`Starting ${language} recognition...`);
-      setPartialText('');
-      await VoskAsr.startRecognition(language);
-      setActiveLanguage(language);
-      setStatus(`Listening (${language})`);
-    } catch (error) {
-      setStatus(`Start failed: ${String(error)}`);
+        setCurrPage(nextPage);
     }
-  }
 
-  async function stopRecognition() {
-    try {
-      await VoskAsr.stopRecognition();
-      setActiveLanguage(null);
-      setPartialText('');
-      setStatus('Stopped');
-    } catch (error) {
-      setStatus(`Stop failed: ${String(error)}`);
-    }
-  }
-
-  return (
-    <SafeAreaView style={styles.root}>
-      <StatusBar barStyle="dark-content" backgroundColor={styles.root.backgroundColor} />
-      <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.title}>dk-asr</Text>
-        <Text style={styles.subtitle}>React Native host app for local Vosk library verification</Text>
-
-        <View style={styles.panel}>
-          <Text style={styles.label}>Status</Text>
-          <Text style={styles.value}>{status}</Text>
-        </View>
-
-        <View style={styles.row}>
-          <TouchableOpacity
-            style={[styles.button, activeLanguage === 'ru' && styles.buttonActive]}
-            onPress={() => startRecognition('ru')}>
-            <Text style={styles.buttonText}>Start RU</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.button, activeLanguage === 'en' && styles.buttonActive]}
-            onPress={() => startRecognition('en')}>
-            <Text style={styles.buttonText}>Start EN</Text>
-          </TouchableOpacity>
-        </View>
-
-        <TouchableOpacity style={[styles.button, styles.stopButton]} onPress={stopRecognition}>
-          <Text style={styles.buttonText}>Stop</Text>
-        </TouchableOpacity>
-
-        <View style={styles.panel}>
-          <Text style={styles.label}>Partial</Text>
-          <Text style={styles.value}>{partialText || '...'}</Text>
-        </View>
-
-        <View style={styles.panel}>
-          <Text style={styles.label}>Final</Text>
-          <Text style={styles.value}>{finalText || '...'}</Text>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
-  );
+    return (
+        <PaperProvider theme={MD3DarkTheme}>
+            <AppContext.Provider value={{ currPage, setCurrPage: handlePageChange }}>
+                <View
+                    style={{
+                        flex: 1,
+                        backgroundColor: isDark ? '#000' : '#fff',
+                    }}>
+                    <BottomNavigation
+                        navigationState={{ index: navigationIndex, routes: APP_ROUTES }}
+                        barStyle={
+                            {
+                                height: 64,
+                                justifyContent: 'center',
+                                overflow: 'hidden',
+                            }
+                        }
+                        onIndexChange={index => {
+                            const nextRoute = APP_ROUTES[index];
+                            if (nextRoute) {
+                                handlePageChange(nextRoute.key);
+                            }
+                        }}
+                        renderScene={({ route }) => {
+                            switch (route.key) {
+                                case 'purchases':
+                                    return <PgPurchases />;
+                                case 'settings':
+                                    return <PgSettings />;
+                            }
+                        }}
+                        sceneAnimationEnabled={false}
+                    />
+                </View>
+            </AppContext.Provider>
+        </PaperProvider>
+    );
 }
-
-const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: '#f2efe8',
-  },
-  content: {
-    padding: 24,
-    gap: 16,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: '#162521',
-  },
-  subtitle: {
-    fontSize: 15,
-    color: '#4a5b55',
-    marginBottom: 8,
-  },
-  row: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  button: {
-    flex: 1,
-    backgroundColor: '#1f6f5f',
-    paddingVertical: 16,
-    paddingHorizontal: 18,
-    borderRadius: 14,
-    alignItems: 'center',
-  },
-  buttonActive: {
-    backgroundColor: '#c96b2c',
-  },
-  stopButton: {
-    backgroundColor: '#7a2f2f',
-  },
-  buttonText: {
-    color: '#fffaf2',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  panel: {
-    backgroundColor: '#fffaf2',
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#ddd2bf',
-  },
-  label: {
-    fontSize: 13,
-    textTransform: 'uppercase',
-    color: '#7b6f5c',
-    marginBottom: 8,
-    letterSpacing: 0.8,
-  },
-  value: {
-    fontSize: 17,
-    lineHeight: 24,
-    color: '#162521',
-  },
-});
-
-export default App;
