@@ -7,6 +7,7 @@ jest.mock("./dbTypes", () => ({
 
 type TExecuteSqlResult = [
   {
+    rowsAffected?: number;
     rows: {
       length: number;
       item: (index: number) => { Content: string };
@@ -25,6 +26,7 @@ describe("tblSettings", () => {
   it("setProperty saves the value as JSON", async () => {
     executeSql.mockResolvedValue([
       {
+        rowsAffected: 1,
         rows: {
           length: 0,
           item: () => ({ Content: "" }),
@@ -34,7 +36,7 @@ describe("tblSettings", () => {
 
     const value = { enabled: true, retries: 3 };
 
-    await setProperty("GoogleDocUrl", value);
+    await setProperty("googleDocUrl", value);
 
     expect(executeSql).toHaveBeenNthCalledWith(
       1,
@@ -43,7 +45,7 @@ describe("tblSettings", () => {
     expect(executeSql).toHaveBeenNthCalledWith(
       2,
       "INSERT OR REPLACE INTO Settings (PropName, Content) VALUES (?, ?)",
-      ["GoogleDocUrl", JSON.stringify(value)]
+      ["googleDocUrl", JSON.stringify(value)]
     );
   });
 
@@ -61,18 +63,18 @@ describe("tblSettings", () => {
         {
           rows: {
             length: 1,
-            item: () => ({ Content: JSON.stringify(125) }),
+            item: () => ({ Content: JSON.stringify("https://example.com") }),
           },
         },
       ]);
 
-    const value = await getProperty<number>("TotalNal");
+    const value = await getProperty<string>("googleDocUrl");
 
-    expect(value).toBe(125);
+    expect(value).toBe("https://example.com");
     expect(executeSql).toHaveBeenNthCalledWith(
       2,
       "SELECT Content FROM Settings WHERE PropName = ?",
-      ["TotalNal"]
+      ["googleDocUrl"]
     );
   });
 
@@ -95,9 +97,9 @@ describe("tblSettings", () => {
         },
       ]);
 
-    const value = await getProperty<number>("TotalBnMb");
+    const value = await getProperty<string>("googleDocUrl");
 
-    expect(value).toBe(0);
+    expect(value).toBe("");
   });
 
   it("getProperty returns the default value when JSON is invalid", async () => {
@@ -119,8 +121,8 @@ describe("tblSettings", () => {
         },
       ]);
 
-    const value = await getProperty<number>("TotalBnSok");
+    const value = await getProperty<string>("googleDocUrl");
 
-    expect(value).toBe(0);
+    expect(value).toBe("");
   });
 });

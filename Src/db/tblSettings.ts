@@ -5,15 +5,11 @@ import { printObjectArray } from "../debug/printObjectArray";
 
 
 export const DefaultSettings = {
-    GoogleDocUrl:"",
-    JCommonRows:[] as TJCommonRow[],
-    TotalBnBish: 0,
-    TotalBnSok:0,
-    TotalBnMb:0,
-    TotalNal:0
+    googleDocUrl: "",
+    allTables: {}
 }
 
-async function createIfNotExists(db:SQLiteDatabase){
+async function createIfNotExists(db: SQLiteDatabase) {
     await db.executeSql(`
     CREATE TABLE IF NOT EXISTS Settings (
       PropName TEXT PRIMARY KEY,
@@ -22,7 +18,7 @@ async function createIfNotExists(db:SQLiteDatabase){
   `);
 }
 
-export async function getProperty<T>(propName:keyof typeof DefaultSettings):Promise<T>{
+export async function getProperty<T>(propName: keyof typeof DefaultSettings): Promise<T> {
     const defaultValue = DefaultSettings[propName] as T;
     const db = await openDatabase();
     await createIfNotExists(db);
@@ -30,7 +26,7 @@ export async function getProperty<T>(propName:keyof typeof DefaultSettings):Prom
         "SELECT Content FROM Settings WHERE PropName = ?",
         [propName]
     );
-    if (result[0].rows.length === 0) {
+    if (!result || result[0].rows.length === 0) {
         return defaultValue;
     }
     const row = result[0].rows.item(0);
@@ -43,9 +39,9 @@ export async function getProperty<T>(propName:keyof typeof DefaultSettings):Prom
 }
 
 export async function setProperty(
-    propName:keyof typeof DefaultSettings,
-    value:any
-):Promise<void>{
+    propName: keyof typeof DefaultSettings,
+    value: any
+): Promise<void> {
     const db = await openDatabase();
     await createIfNotExists(db);
 
@@ -54,28 +50,30 @@ export async function setProperty(
         "INSERT OR REPLACE INTO Settings (PropName, Content) VALUES (?, ?)",
         [propName, content]
     );
+    console.log(`Setting ${propName} stored`);
 }
 
-async function printAllRows(){
+async function printAllRows() {
     const db = await openDatabase();
     await createIfNotExists(db);
     const result = await db.executeSql("SELECT PropName, Content FROM Settings");
-        if (result[0].rows.length === 0) {
+    if (!result || result[0].rows.length === 0) {
         console.log(`Table Settings: No Rows`);
+        return;
     }
-    let rows:any[] = [];
-    for(let i=0; i< result[0].rows.length; i++){
+    let rows: any[] = [];
+    for (let i = 0; i < result[0].rows.length; i++) {
         const row = result[0].rows.item(i);
         rows.push(row);
     }
     printObjectArray(rows);
 }
 
-export function GetDebugApiFunc(dbg:object){
+export function RegDebugApiFunc(dbg: object) {
     (dbg as any).Settings = {
-        getProp:getProperty,
-        setProp:setProperty,
-        printAllRows:printAllRows
+        getProp: getProperty,
+        setProp: setProperty,
+        printAllRows: printAllRows
     };
 }
 
