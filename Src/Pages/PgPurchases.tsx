@@ -19,11 +19,13 @@ const TABLE_COLUMNS = [
 export default function PgPurchases() {
   const appContext = useContext(AppContext);
   const [rows, setRows] = useState<TJCommonRow[]>([]);
+  const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
 
   const reloadData = useCallback(async () => {
     const allTables = await getProperty<TAllTables>('allTables');
     const loadedRows = allTables?.JCommon ?? [];
     setRows(loadedRows);
+    setSelectedRowId(null);
   }, []);
 
   const loadDataFromCloud = async () => {
@@ -61,6 +63,10 @@ export default function PgPurchases() {
     return !column.numeric ? styles.leftAlignedText : undefined;
   }
 
+  function handleRowPress(rowId: string) {
+    setSelectedRowId(current => (current === rowId ? null : rowId));
+  }
+
   return (
     <View style={[Pgstyle.clientArea, styles.page]}>
       <Appbar.Header>
@@ -89,7 +95,10 @@ export default function PgPurchases() {
             <ScrollView style={styles.tableBody} nestedScrollEnabled>
               <DataTable>
                 {rows.map(row => (
-                  <DataTable.Row key={row.Id}>
+                  <DataTable.Row
+                    key={row.Id}
+                    onPress={() => handleRowPress(row.Id)}
+                    style={selectedRowId === row.Id ? styles.selectedRow : undefined}>
                     {TABLE_COLUMNS.map(column => (
                       <DataTable.Cell
                         key={column.key}
@@ -132,5 +141,8 @@ const styles = StyleSheet.create({
   },
   leftAlignedText: {
     textAlign: 'left',
+  },
+  selectedRow: {
+    backgroundColor: 'rgba(187, 134, 252, 0.18)',
   },
 });
