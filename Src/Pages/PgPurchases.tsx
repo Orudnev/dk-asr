@@ -12,7 +12,7 @@ import { Pgstyle } from './pgStyle';
 
 export default function PgPurchases(){
     return (
-        <View style = {[Pgstyle.page]} >
+        <View style = {[Pgstyle.clientArea]} >
           <Text >Purchases</Text>
         </View>    );
 }

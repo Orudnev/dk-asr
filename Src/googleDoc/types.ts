@@ -1,17 +1,5 @@
 export type TMoneyAccount = 'BnBish'|'BnSok'|'BnMb'|'Nal';
 
-export type TJCommonRow = {
-    Id:string,
-    DestTable:TMoneyAccount,
-    Date:Date,
-    DCItem:string,
-    Description:string,
-    Dest:string,
-    Sum:number,
-    Sign:number,
-    Status:number
-}
-
 export type TAccountRow = {
     Id:string,
     Date:Date,
@@ -22,4 +10,24 @@ export type TAccountRow = {
     Sign:number,
     Total:number,
     Status:number
+}
+
+export type TJCommonRow = Omit<TAccountRow,"Tot"> & {
+    DestTable:TMoneyAccount,
+}
+
+export type TDCItemRow = {
+    Name: string,
+    Sign: number,
+    Dest: string
+}
+
+export type TAllTables = {
+    BnBish: TAccountRow[],
+    BnSok: TAccountRow[],
+    BnMb: TAccountRow[],
+    Nal:TAccountRow[],
+    JCommon: TJCommonRow[],
+    DCItems: TDCItemRow[],
+    Dest: string[]
 }

@@ -1,12 +1,11 @@
 import { SQLiteDatabase } from "react-native-sqlite-storage";
 import { openDatabase } from "./dbTypes";
-import { TJCommonRow } from "../googleDoc/types";
+import { TAllTables, TJCommonRow } from "../googleDoc/types";
 import { printObjectArray } from "../debug/printObjectArray";
-
 
 export const DefaultSettings = {
     googleDocUrl: "",
-    allTables: {}
+    allTables: {BnBish:[],BnSok:[],BnMb:[],Nal:[],JCommon:[],DCItems:[],Dest:[]} as TAllTables
 }
 
 async function createIfNotExists(db: SQLiteDatabase) {
