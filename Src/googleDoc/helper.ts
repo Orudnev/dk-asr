@@ -1,6 +1,6 @@
 import { getProperty, setProperty } from "../db/tblSettings";
 import { GetAllTablesContent } from "../helpers/webApiWrapper";
-import { TAccountRow, TAllTables, TDCItemRow, TJCommonRow } from "./types";
+import { StatusEnum, TAccountRow, TAllTables, TDCItemRow, TJCommonRow, TTotals } from "./types";
 
 export async function updateDataFromCloud() {
     const rawData: any = await GetAllTablesContent();
@@ -65,6 +65,32 @@ function convertArrayToDCItemRows(rows: any[]): TDCItemRow[] {
             Dest: row[2]
         };
         result.push(newRow);
+    });
+    return result;
+}
+
+export async function getTotals(): Promise<TTotals> {
+    let calcTotals = (rows: TAccountRow[], tableName: string) => {
+        let accTotals = rows.reduce((acc, row) => {
+            if (row.DCItem == 'Вх.Остаток') {
+                return row.Total;
+            }
+            return acc + row.Sum * row.Sign;
+        }, 0);
+        let jcTotals = currJcRows.filter(row => row.DestTable == tableName && (row.Status == undefined || row.Status == 0)).reduce((acc, row) => acc + row.Sum * row.Sign, 0);
+        return accTotals + jcTotals;
+    }
+    const allRows = await getProperty<TAllTables>('allTables');
+    let currJcRows = allRows.JCommon;
+    let result: TTotals = {
+        BnBish: calcTotals(allRows.BnBish, "BnBish"),
+        BnMb: calcTotals(allRows.BnMb, "BnMb"),
+        BnSok: calcTotals(allRows.BnSok, "BnSok"),
+        Nal: calcTotals(allRows.Nal, "Nal")
+    };
+    //корректировка итогов с учетом внутренних переводов
+    currJcRows.filter(row => row.DCItem === 'Внутр.перевод' && row.Status < StatusEnum.InProcess).forEach(row => {
+        (result as any)[row.Dest] += row.Sum;
     });
     return result;
 }

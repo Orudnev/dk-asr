@@ -32,3 +32,18 @@ export type TAllTables = {
     DCItems: TDCItemRow[],
     Dest: string[]
 }
+
+export type TTotals = {
+    BnBish: number,
+    BnSok: number,
+    BnMb: number,
+    Nal: number
+}
+
+export enum StatusEnum {
+    New = -1,
+    NotProcessed = 0,
+    InProcess = 1,
+    Processed = 2,
+    Lookup = 3
+}

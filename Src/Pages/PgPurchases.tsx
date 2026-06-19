@@ -16,6 +16,16 @@ const TABLE_COLUMNS = [
   { key: 'Sum', title: 'Sum', numeric: true, width: 100 },
 ] as const;
 
+
+function Totals(totals:TTotals){
+  return (
+    <View style={[Pgstyle.commandButtons]}>
+
+    </View>
+  );
+}
+
+
 export default function PgPurchases() {
   const appContext = useContext(AppContext);
   const [rows, setRows] = useState<TJCommonRow[]>([]);

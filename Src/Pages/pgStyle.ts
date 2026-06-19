@@ -9,6 +9,12 @@ export const Pgstyle = StyleSheet.create({
         paddingBottom: 20,
         gap: 14,
     },
+    totalBar:{
+        flexDirection: 'row',
+        gap: 10,
+        flexWrap: 'wrap',
+        alignItems: 'center',
+    },
     commandButtons: {
         flexDirection: 'row',
         gap: 10,
