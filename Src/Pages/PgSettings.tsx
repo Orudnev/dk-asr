@@ -1,14 +1,20 @@
-import React, { useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text } from 'react-native';
-import { Pgstyle } from './pgStyle';
 import { Appbar, TextInput } from 'react-native-paper';
+import { AppContext } from '../../App';
 import { getProperty, setProperty } from '../db/tblSettings';
+import { Pgstyle } from './pgStyle';
 
 export default function PgSettings() {
+  const appContext = useContext(AppContext);
   const [googleDocApiUrl, setGoogleDocApiUrl] = useState('');
   const [isDirty, setIsDirty] = useState(false);
 
   useEffect(() => {
+    if (appContext?.currPage !== 'settings') {
+      return;
+    }
+
     async function loadData() {
       const url = (await getProperty<string>('googleDocUrl')) ?? '';
       setGoogleDocApiUrl(url);
@@ -16,7 +22,7 @@ export default function PgSettings() {
     }
 
     loadData();
-  }, []);
+  }, [appContext?.currPage]);
 
   async function applySettings() {
     await setProperty('googleDocUrl', googleDocApiUrl);

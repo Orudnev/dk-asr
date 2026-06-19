@@ -12,8 +12,9 @@ export type TAccountRow = {
     Status:number
 }
 
-export type TJCommonRow = Omit<TAccountRow,"Tot"> & {
+export type TJCommonRow = Omit<TAccountRow,"Total"> & {
     DestTable:TMoneyAccount,
+    AddRowTime:Date
 }
 
 export type TDCItemRow = {

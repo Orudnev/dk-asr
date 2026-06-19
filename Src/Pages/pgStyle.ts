@@ -1,12 +1,18 @@
 import {
-  StyleSheet,
+    StyleSheet,
 } from 'react-native';
 
 export const Pgstyle = StyleSheet.create({
-    clientArea:{
+    clientArea: {
         paddingLeft: 20,
         paddingRight: 20,
         paddingBottom: 20,
         gap: 14,
+    },
+    commandButtons: {
+        flexDirection: 'row',
+        gap: 10,
+        flexWrap: 'wrap',
+        alignItems: 'center',
     }
 });

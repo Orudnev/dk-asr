@@ -17,7 +17,7 @@ type AppRoute = {
     focusedIcon: string;
 };
 const APP_ROUTES: AppRoute[] = [
-    { key: 'purchases', title: 'Purchases', focusedIcon: 'account-voice' },
+    { key: 'purchases', title: 'Purchases', focusedIcon: 'cart' },
     { key: 'settings', title: 'Settings', focusedIcon: 'cog-outline' }
 ];
 
