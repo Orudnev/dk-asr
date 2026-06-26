@@ -1,11 +1,12 @@
 import React, { useCallback, useContext, useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
-import { Appbar, Button, DataTable } from 'react-native-paper';
+import { Appbar, Button, DataTable, Text } from 'react-native-paper';
 import { AppContext } from '../../App';
 import { getProperty } from '../db/tblSettings';
-import { TAllTables, TJCommonRow } from '../googleDoc/types';
-import { updateDataFromCloud } from '../googleDoc/helper';
+import { TAllTables, TJCommonRow, TTotals } from '../googleDoc/types';
+import { getTotals, updateDataFromCloud } from '../googleDoc/helper';
 import { Pgstyle } from './pgStyle';
+import { lightGreen100, lightGreen500 } from 'react-native-paper/lib/typescript/styles/themes/v2/colors';
 
 const TABLE_COLUMNS = [
   { key: 'DestTable', title: 'DestTable', numeric: false, width: 110 },
@@ -17,10 +18,27 @@ const TABLE_COLUMNS = [
 ] as const;
 
 
-function Totals(totals:TTotals){
-  return (
-    <View style={[Pgstyle.commandButtons]}>
 
+
+function Totals(props: TTotals) {
+  return (
+    <View style={[Pgstyle.totalBar]}>
+      <View style={[styles.totalItemContainer]}>
+        <Text style={[styles.totalItemLabel]}>BnBish</Text>
+        <Text style={[styles.totalItemValue]}>{props.BnBish}</Text>
+      </View>
+      <View style={[styles.totalItemContainer]}>
+        <Text style={[styles.totalItemLabel]}>BnSok</Text>
+        <Text style={[styles.totalItemValue]}>{props.BnSok}</Text>
+      </View>
+      <View style={[styles.totalItemContainer]}>
+        <Text style={[styles.totalItemLabel]}>BnMb</Text>
+        <Text style={[styles.totalItemValue]}>{props.BnMb}</Text>
+      </View>
+      <View style={[styles.totalItemContainer]}>
+        <Text style={[styles.totalItemLabel]}>Nal</Text>
+        <Text style={[styles.totalItemValue]}>{props.Nal}</Text>
+      </View>
     </View>
   );
 }
@@ -28,17 +46,24 @@ function Totals(totals:TTotals){
 
 export default function PgPurchases() {
   const appContext = useContext(AppContext);
+  const [isLoasing, setIsLoading] = useState(false);
   const [rows, setRows] = useState<TJCommonRow[]>([]);
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
+  const [totals, setTotals] = useState<TTotals>({ BnBish: 0, BnSok: 0, BnMb: 0, Nal: 0 });
 
   const reloadData = useCallback(async () => {
+    setIsLoading(true);
     const allTables = await getProperty<TAllTables>('allTables');
-    const loadedRows = allTables?.JCommon ?? [];
+    const loadedRows = allTables?.JCommon.filter(r=>r.Status<3) ?? [];
     setRows(loadedRows);
     setSelectedRowId(null);
+    const newTotals = await getTotals();
+    setTotals(newTotals);
+    setIsLoading(false);
   }, []);
 
   const loadDataFromCloud = async () => {
+    setIsLoading(true);
     await updateDataFromCloud();
     reloadData();
   };
@@ -83,6 +108,7 @@ export default function PgPurchases() {
         <Appbar.Action icon="cart" accessibilityLabel="Purchases" />
         <Appbar.Content title="Purchases" />
       </Appbar.Header>
+      <Totals {...totals}></Totals>
       <View style={[Pgstyle.commandButtons]}>
         <Button mode="outlined" icon="reload" onPress={loadDataFromCloud}>Reload</Button>
       </View>
@@ -125,6 +151,12 @@ export default function PgPurchases() {
           </View>
         </ScrollView>
       </View>
+      {isLoasing && (
+        <View style={[Pgstyle.overlay]} >
+          <Text style={[{fontSize:30}]}>Loading...</Text>
+        </View>
+      )
+      }
     </View>
   );
 }
@@ -140,7 +172,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   tableBody: {
-    maxHeight: 300,
+    maxHeight: 450,
   },
   column: {
     flexGrow: 0,
@@ -155,4 +187,21 @@ const styles = StyleSheet.create({
   selectedRow: {
     backgroundColor: 'rgba(187, 134, 252, 0.18)',
   },
+  totalItemContainer: {
+    borderStyle: 'solid',
+    borderColor: 'gray',
+    borderRadius: 10,
+    borderWidth: 1,
+    padding: 5,
+    gap:5
+  },
+  totalItemLabel: {
+    fontSize: 15,
+    color: 'gray',
+    textAlign:'center'
+  },
+  totalItemValue: {
+    fontSize: 20,
+    color: '#04d454'
+  }
 });
