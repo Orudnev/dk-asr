@@ -68,13 +68,47 @@ async function printAllRows() {
     printObjectArray(rows);
 }
 
+
+export async function joinAllTables(){
+    const allTblObj = await getProperty<TAllTables>('allTables');
+    const getRows = (tblName:string)=>{
+        const rv = (allTblObj as any)[tblName].map((r:any)=>({...r,SrcTable:tblName}));
+        return rv;
+    };
+    const joinedTable = [...getRows("BnBish"),...getRows("BnSok"),...getRows("BnMb"),...getRows("Nal")];
+    return joinedTable;
+}
+
+
+function addResultToGlobal(name:string,value:any){
+    if(!(global as any).result){
+        (global as any).result = {};
+    }
+    (global as any).result[name] = value;
+}
+
 export function RegDebugApiFunc(dbg: object) {
     (dbg as any).Settings = {
         getProp: getProperty,
         setProp: setProperty,
-        printAllRows: printAllRows
+        printAllRows: printAllRows,
+        getAllTableRows:async(result:any)=>{
+            const joinedTbl = await joinAllTables();
+            console.log(joinedTbl);
+            addResultToGlobal("joinedTbl",joinedTbl);
+        },
+        findRows:async(searchCriteria:string)=>{
+            if(!(global as any).result || !(global as any).result.joinedTbl.filter){
+                await (global as any).dbg.Settings.getAllTableRows();
+            }
+            const normalize = (str:string)=>str.toLowerCase().replace(/ё/g, 'е');
+            const result = (global as any).result.joinedTbl.filter((row:any)=>normalize(row.Description).includes(normalize(searchCriteria))).sort((r:any)=>r.Date).reverse();
+            console.log(result);
+            printObjectArray(result);
+        }
     };
 }
+
 
 
 

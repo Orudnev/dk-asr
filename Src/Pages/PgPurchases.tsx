@@ -7,6 +7,7 @@ import { TAllTables, TJCommonRow, TTotals } from '../googleDoc/types';
 import { getTotals, updateDataFromCloud } from '../googleDoc/helper';
 import { Pgstyle } from './pgStyle';
 import { lightGreen100, lightGreen500 } from 'react-native-paper/lib/typescript/styles/themes/v2/colors';
+import { ScrAddRow } from './PgAddOrEditRow';
 
 const TABLE_COLUMNS = [
   { key: 'DestTable', title: 'DestTable', numeric: false, width: 110 },

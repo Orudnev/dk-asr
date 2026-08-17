@@ -4,8 +4,10 @@ import { BottomNavigation, MD3DarkTheme, PaperProvider } from 'react-native-pape
 import PgPurchases from './Src/Pages/PgPurchases';
 import PgSettings from './Src/Pages/PgSettings';
 import { RegisterDebugAPI } from './Src/debug/debug';
+import { TestASR } from './Src/Pages/TestASR';
+import { PgAddOrEditRow } from './Src/Pages/PgAddOrEditRow';
 
-export type TPages = 'purchases' | 'settings';
+export type TPages = 'purchases' | 'settings'|'addOrEditRow'|'test';
 type AppContextType = {
     currPage: TPages;
     setCurrPage: (page: TPages) => void | Promise<void>;
@@ -18,7 +20,9 @@ type AppRoute = {
 };
 const APP_ROUTES: AppRoute[] = [
     { key: 'purchases', title: 'Purchases', focusedIcon: 'cart' },
-    { key: 'settings', title: 'Settings', focusedIcon: 'cog-outline' }
+    { key: 'addOrEditRow', title: 'Item', focusedIcon: 'pencil' },
+    { key: 'settings', title: 'Settings', focusedIcon: 'cog-outline' },
+    { key: 'test', title: 'Test', focusedIcon: 'ev-plug-chademo' }
 ];
 
 
@@ -79,8 +83,12 @@ export default function App() {
                             switch (route.key) {
                                 case 'purchases':
                                     return <PgPurchases />;
+                                case 'addOrEditRow':
+                                    return <PgAddOrEditRow />;
                                 case 'settings':
-                                    return <PgSettings />;
+                                    return <PgSettings />;                                    
+                                case 'test':
+                                    return <TestASR />;
                             }
                         }}
                         sceneAnimationEnabled={false}

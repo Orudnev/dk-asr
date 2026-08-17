@@ -19,7 +19,7 @@ type AsrEvent = {
   text: string;
 };
 
-function App(): React.JSX.Element {
+export function TestASR(): React.JSX.Element {
   const [activeLanguage, setActiveLanguage] = useState<Language | null>(null);
   const [status, setStatus] = useState('Idle');
   const [partialText, setPartialText] = useState('');
@@ -79,7 +79,7 @@ function App(): React.JSX.Element {
     }
   }
 
-  return (
+  return ( 
     <SafeAreaView style={styles.root}>
       <StatusBar barStyle="dark-content" backgroundColor={styles.root.backgroundColor} />
       <ScrollView contentContainerStyle={styles.content}>
@@ -185,4 +185,3 @@ const styles = StyleSheet.create({
   },
 });
 
-export default App;
