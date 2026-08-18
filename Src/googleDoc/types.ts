@@ -1,4 +1,5 @@
 export type TMoneyAccount = 'BnBish'|'BnSok'|'BnMb'|'Nal';
+export const MoneyAccounts:TMoneyAccount[] = ['BnBish','BnSok','BnMb','Nal'];
 
 export type TAccountRow = {
     Id:string,

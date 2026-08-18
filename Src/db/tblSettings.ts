@@ -71,6 +71,7 @@ async function printAllRows() {
 
 export async function joinAllTables(){
     const allTblObj = await getProperty<TAllTables>('allTables');
+    addResultToGlobal("allTblObj",allTblObj);
     const getRows = (tblName:string)=>{
         const rv = (allTblObj as any)[tblName].map((r:any)=>({...r,SrcTable:tblName}));
         return rv;
