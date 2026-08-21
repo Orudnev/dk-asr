@@ -172,7 +172,7 @@ export function PgAddOrEditRow(): React.JSX.Element {
                 <RButton onClick={() => { }} />
                 <Text style={styles.value}>blablabla jhkjhlkh  jkhlkjhlkhlkhklh hkjhlkhklj hjkhl lkjhkljhhlk  kjhjklhlkh lkjl;j;lj lkjlkjljk lkj;lkj ;lkj;lj  </Text>
             </View>
-            <View style={{display:'flex', flexDirection:'row', maxWidth: 300}}>
+            <View style={{ display: 'flex', flexDirection: 'row', flexWrap:'wrap', maxWidth: 300 }}>
                 <DropDownBox itemSourse={MoneyAccounts}
                     fldStyle={fldStyles.destTable}
                     selItem={destTable}
@@ -219,7 +219,7 @@ const fldStyles = StyleSheet.create({
     fldCommon: {
         marginTop: 10,
         marginLeft: 5,
-        minHeight: 50
+        minHeight: 50,
     },
     destTable: {
         width: 140
@@ -229,6 +229,7 @@ const fldStyles = StyleSheet.create({
         minHeight: 50
     },
     datePickerText: {
+        color:'#ffffff',
         width: 120
     },
     DCItem: {
@@ -238,9 +239,11 @@ const fldStyles = StyleSheet.create({
         width: 140
     },
     Description: {
+        paddingTop:3,
         width: '95%',
     },
     Sum: {
+        paddingTop:5,
         width: 140
     },
 
