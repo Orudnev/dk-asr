@@ -69,15 +69,15 @@ async function printAllRows() {
 }
 
 
-export async function joinAllTables(){
+async function joinAllAccountTables(){
     const allTblObj = await getProperty<TAllTables>('allTables');
     addResultToGlobal("allTblObj",allTblObj);
     const getRows = (tblName:string)=>{
-        const rv = (allTblObj as any)[tblName].map((r:any)=>({...r,SrcTable:tblName}));
+        const rv = (allTblObj as any)[tblName].map((r:any)=>({...r,DestTable:tblName}));
         return rv;
     };
     const joinedTable = [...getRows("BnBish"),...getRows("BnSok"),...getRows("BnMb"),...getRows("Nal")];
-    return joinedTable;
+    return joinedTable as TJCommonRow[];
 }
 
 
@@ -94,7 +94,7 @@ export function RegDebugApiFunc(dbg: object) {
         setProp: setProperty,
         printAllRows: printAllRows,
         getAllTableRows:async(result:any)=>{
-            const joinedTbl = await joinAllTables();
+            const joinedTbl = await joinAllAccountTables();
             console.log(joinedTbl);
             addResultToGlobal("joinedTbl",joinedTbl);
         },

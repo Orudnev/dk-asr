@@ -1,11 +1,12 @@
 import { useContext, useState, useMemo, useEffect } from 'react';
-import { StyleSheet, View, Text } from "react-native";
-import { Button, Icon, ActivityIndicator } from 'react-native-paper';
+import { StyleSheet, View, Text, TextInput, ScrollView } from "react-native";
+import { Button, Icon, ActivityIndicator, DataTable } from 'react-native-paper';
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Picker } from '@react-native-picker/picker';
-import { MoneyAccounts, TAllTables, TMoneyAccount } from '../googleDoc/types';
+import { MoneyAccounts, TAllTables, TJCommonRow, TMoneyAccount } from '../googleDoc/types';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { getProperty } from '../db/tblSettings';
+import { getColumnStyle, getColumnTextStyle, TABLE_COLUMNS } from './PgPurchases';
 
 type TRadioButtonProps = {
     onClick: (isPressed: boolean) => void
@@ -149,30 +150,126 @@ export function DropDownBox(props: TDropDownBoxProps) {
     );
 }
 
+function joinAllAccountTables(allTblObj: TAllTables) {
+    const getRows = (tblName: string) => {
+        const rv = (allTblObj as any)[tblName].map((r: any) => ({ ...r, DestTable: tblName }));
+        return rv;
+    };
+    const joinedTable = [...getRows("BnBish"), ...getRows("BnSok"), ...getRows("BnMb"), ...getRows("Nal")];
+    return joinedTable as TJCommonRow[];
+}
+
+type TSearchResultDataGridProps = {
+    rows: TJCommonRow[]
+};
+
+export function SearchResultDataGrid(props: TSearchResultDataGridProps) {
+    const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
+    function handleRowPress(rowId: string) {
+        setSelectedRowId(current => (current === rowId ? null : rowId));
+    }
+
+    function formatCellValue(row: TJCommonRow, columnKey: (typeof TABLE_COLUMNS)[number]['key']) {
+        const value = (row as any)[columnKey];
+        if (columnKey === 'Date') {
+            return value ? String(value).slice(0, 10) : '';
+        }
+        return value == null ? '' : String(value);
+    }
+
+    return (
+        <ScrollView horizontal showsHorizontalScrollIndicator>
+            <View>
+                <DataTable>
+                    <DataTable.Header>
+                        {TABLE_COLUMNS.map(column => (
+                            <DataTable.Title
+                                key={column.key}
+                                numeric={column.numeric}
+                                style={getColumnStyle(column)}
+                                textStyle={getColumnTextStyle(column)}>
+                                {column.title}
+                            </DataTable.Title>
+                        ))}
+                    </DataTable.Header>
+                </DataTable>
+                <ScrollView style={{ maxHeight: 450, }} nestedScrollEnabled>
+                    <DataTable>
+                        {props.rows.map((row,index) => (
+                            <DataTable.Row
+                                key={row.Id.toString+"_"+index.toString()}
+                                onPress={() => handleRowPress(row.Id)}
+                                style={selectedRowId === row.Id ? styles.selectedRow : undefined}>
+                                {TABLE_COLUMNS.map(column => (
+                                    <DataTable.Cell
+                                        key={column.key}
+                                        numeric={column.numeric}
+                                        style={getColumnStyle(column)}
+                                        textStyle={getColumnTextStyle(column)}>
+                                        {formatCellValue(row, column.key)}
+                                    </DataTable.Cell>
+                                ))}
+                            </DataTable.Row>
+                        ))}
+                    </DataTable>
+                </ScrollView>
+            </View>
+        </ScrollView>
+    );
+}
+
 export function PgAddOrEditRow(): React.JSX.Element {
+    const [searchCriteria, setSearchCriteria] = useState('');
     const [destTable, setDestTable] = useState<TMoneyAccount>('BnBish');
     const [date, setDate] = useState<Date>(new Date());
     const [DCItem, setDCItem] = useState("Прод");
     const [dest, setDest] = useState("Биш");
     const [description, setDescription] = useState("Blablablablab");
-    const [sum, setSum] = useState(100500);
+    const [sum, setSum] = useState((100500).toString());
     const [allTables, setAllTables] = useState<TAllTables | null>(null);
+    const [allAccTableRows, setAllAccTableRows] = useState<TJCommonRow[]>([]);
+    const [searchResultRows, setSearchResultRows] = useState<TJCommonRow[]>([]);
     useEffect(() => {
         const loadTables = async () => {
             const data = await getProperty<TAllTables>('allTables');
             setAllTables(data);
+            let searchSrc = joinAllAccountTables(data);
+            setAllAccTableRows(searchSrc);
         };
-
         loadTables();
     }, []);
-
+    const onSearchCriteriaChange = (searchCriteria: string) => {
+        setSearchCriteria(searchCriteria);
+        let newText = searchCriteria.toLowerCase();
+        let newSearchResult = allAccTableRows.filter(r =>r.Description && r.Description.toLowerCase().includes(newText));
+        if(newSearchResult.length<50){
+            setSearchResultRows(newSearchResult);
+        } else {
+            let first50 = newSearchResult.slice(0,50);
+            setSearchResultRows(first50);
+        }
+    }
+    if(searchResultRows.length>0){
+        let s = 1;
+        let sr = searchResultRows.filter(r=>r.Id = `693UR0I3`);
+        s = 2;
+    }
     return (
         <SafeAreaView>
             <View style={[{ display: 'flex', flexDirection: 'row', marginRight: 10 }, { ...fldStyles.fldCommon, ...borderStyle }]}>
                 <RButton onClick={() => { }} />
-                <Text style={styles.value}>blablabla jhkjhlkh  jkhlkjhlkhlkhklh hkjhlkhklj hjkhl lkjhkljhhlk  kjhjklhlkh lkjl;j;lj lkjlkjljk lkj;lkj ;lkj;lj  </Text>
+                <TextInput style={[styles.value, { maxWidth: 300 }]}
+                    multiline={true}
+                    value={searchCriteria}
+                    onChangeText={(tx) => {
+                        onSearchCriteriaChange(tx);
+                    }}
+                />
             </View>
-            <View style={{ display: 'flex', flexDirection: 'row', flexWrap:'wrap', maxWidth: 300 }}>
+            <View style={[borderStyle, { height: 250, marginLeft: 5, marginRight: 5, marginTop: 10 }]}>
+                <SearchResultDataGrid rows={searchResultRows} />
+            </View>
+            <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', maxWidth: 300 }}>
                 <DropDownBox itemSourse={MoneyAccounts}
                     fldStyle={fldStyles.destTable}
                     selItem={destTable}
@@ -197,12 +294,16 @@ export function PgAddOrEditRow(): React.JSX.Element {
                 />
                 <View style={{ display: 'flex', flexDirection: 'row' }}>
                     <View style={{ ...fldStyles.Sum, ...fldStyles.fldCommon, ...borderStyle }}>
-                        <Text style={styles.value}>{sum}</Text>
+                        <TextInput style={styles.value} value={sum.toString()}
+                            onChangeText={setSum}
+                            keyboardType='numeric' />
                     </View>
                 </View>
                 <View style={{ display: 'flex', flexDirection: 'row' }}>
                     <View style={{ ...fldStyles.Description, ...fldStyles.fldCommon, ...borderStyle }}>
-                        <Text style={styles.value}>{description}</Text>
+                        <TextInput style={styles.value} value={description}
+                            onChangeText={setDescription}
+                        />
                     </View>
                 </View>
             </View>
@@ -229,7 +330,7 @@ const fldStyles = StyleSheet.create({
         minHeight: 50
     },
     datePickerText: {
-        color:'#ffffff',
+        color: '#ffffff',
         width: 120
     },
     DCItem: {
@@ -239,42 +340,16 @@ const fldStyles = StyleSheet.create({
         width: 140
     },
     Description: {
-        paddingTop:3,
+        paddingTop: 3,
         width: '95%',
     },
     Sum: {
-        paddingTop:5,
+        paddingTop: 5,
         width: 140
     },
 
 });
-// const ddwnStyles = StyleSheet.create({
-//     dropdown: {
-//         ...commonStyles,
-//         paddingHorizontal: 12,
-//         minHeight: 48,
-//         backgroundColor: '#1f1f1f',
-//     },
-// dropdownContainer: {
-//     borderRadius: 10,
-//     backgroundColor: '#1f1f1f',
-//     borderWidth: 1,
-//     borderColor: '#777',
-// },
-// dropdownText: {
-//     fontSize: 16,
-//     color: '#f5f5f5',
-// },
-// placeHolderText: {
-//     color: '#777'
-// },
-// dropdownItemContainer: {
-//     backgroundColor: '#1f1f1f',
-// },
-// activeItem: {
-//     backgroundColor: '#2c2c2c',
-// },
-//});
+
 const styles = StyleSheet.create({
     panel: {
         ...borderStyle,
@@ -302,5 +377,8 @@ const styles = StyleSheet.create({
         fontSize: 17,
         lineHeight: 24,
         color: '#d9f0ea',
+    },
+    selectedRow: {
+        backgroundColor: 'rgba(187, 134, 252, 0.18)',
     },
 });

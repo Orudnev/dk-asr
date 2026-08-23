@@ -7,15 +7,14 @@ import { TAllTables, TJCommonRow, TTotals } from '../googleDoc/types';
 import { getTotals, updateDataFromCloud } from '../googleDoc/helper';
 import { Pgstyle } from './pgStyle';
 import { lightGreen100, lightGreen500 } from 'react-native-paper/lib/typescript/styles/themes/v2/colors';
-import { ScrAddRow } from './PgAddOrEditRow';
 
-const TABLE_COLUMNS = [
-  { key: 'DestTable', title: 'DestTable', numeric: false, width: 110 },
-  { key: 'Date', title: 'Date', numeric: false, width: 110 },
+export const TABLE_COLUMNS = [
+  { key: 'Sum', title: 'Sum', numeric: true, width: 40 },
+  { key: 'Description', title: 'Description', numeric: false, width: 120 },
+  { key: 'DestTable', title: 'DstTbl', numeric: false, width: 50 },
+  { key: 'Date', title: 'Date', numeric: false, width: 80 },
   { key: 'DCItem', title: 'DCItem', numeric: false, width: 120 },
   { key: 'Dest', title: 'Dest', numeric: false, width: 100 },
-  { key: 'Description', title: 'Description', numeric: false, width: 240 },
-  { key: 'Sum', title: 'Sum', numeric: true, width: 100 },
 ] as const;
 
 
@@ -44,6 +43,19 @@ function Totals(props: TTotals) {
   );
 }
 
+export function getColumnStyle(column: (typeof TABLE_COLUMNS)[number]) {
+  return [
+    styles.column,
+    { width: column.width },
+    !column.numeric && styles.textColumn,
+    column.numeric && styles.numberColumn
+  ];
+}
+
+export function getColumnTextStyle(column: (typeof TABLE_COLUMNS)[number]) {
+  return !column.numeric ? styles.leftAlignedText : undefined;
+}
+
 
 export default function PgPurchases() {
   const appContext = useContext(AppContext);
@@ -55,7 +67,7 @@ export default function PgPurchases() {
   const reloadData = useCallback(async () => {
     setIsLoading(true);
     const allTables = await getProperty<TAllTables>('allTables');
-    const loadedRows = allTables?.JCommon.filter(r=>r.Status<3) ?? [];
+    const loadedRows = allTables?.JCommon.filter(r => r.Status < 3) ?? [];
     setRows(loadedRows);
     setSelectedRowId(null);
     const newTotals = await getTotals();
@@ -86,19 +98,6 @@ export default function PgPurchases() {
 
     return value == null ? '' : String(value);
   }
-
-  function getColumnStyle(column: (typeof TABLE_COLUMNS)[number]) {
-    return [
-      styles.column,
-      { width: column.width },
-      !column.numeric && styles.textColumn,
-    ];
-  }
-
-  function getColumnTextStyle(column: (typeof TABLE_COLUMNS)[number]) {
-    return !column.numeric ? styles.leftAlignedText : undefined;
-  }
-
   function handleRowPress(rowId: string) {
     setSelectedRowId(current => (current === rowId ? null : rowId));
   }
@@ -154,7 +153,7 @@ export default function PgPurchases() {
       </View>
       {isLoasing && (
         <View style={[Pgstyle.overlay]} >
-          <Text style={[{fontSize:30}]}>Loading...</Text>
+          <Text style={[{ fontSize: 30 }]}>Loading...</Text>
         </View>
       )
       }
@@ -182,6 +181,9 @@ const styles = StyleSheet.create({
   textColumn: {
     justifyContent: 'flex-start',
   },
+  numberColumn: {
+    marginRight: 10
+  },
   leftAlignedText: {
     textAlign: 'left',
   },
@@ -194,12 +196,12 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 1,
     padding: 5,
-    gap:5
+    gap: 5
   },
   totalItemLabel: {
     fontSize: 15,
     color: 'gray',
-    textAlign:'center'
+    textAlign: 'center'
   },
   totalItemValue: {
     fontSize: 20,
