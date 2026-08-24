@@ -160,19 +160,25 @@ function joinAllAccountTables(allTblObj: TAllTables) {
 }
 
 type TSearchResultDataGridProps = {
-    rows: TJCommonRow[]
+    rows: TJCommonRow[],
+    onRowSelected:(rowId:string)=>void
 };
 
 export function SearchResultDataGrid(props: TSearchResultDataGridProps) {
     const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
     function handleRowPress(rowId: string) {
         setSelectedRowId(current => (current === rowId ? null : rowId));
+        props.onRowSelected(rowId);
     }
 
     function formatCellValue(row: TJCommonRow, columnKey: (typeof TABLE_COLUMNS)[number]['key']) {
         const value = (row as any)[columnKey];
         if (columnKey === 'Date') {
-            return value ? String(value).slice(0, 10) : '';
+            if(value){
+                let d = new Date(value);
+                return `${d.getFullYear()}-${String((d.getMonth()+1)).padStart(2, '0')}-${String((d.getDate())).padStart(2, '0')}`
+            }
+            return '';
         }
         return value == null ? '' : String(value);
     }
@@ -241,7 +247,10 @@ export function PgAddOrEditRow(): React.JSX.Element {
     const onSearchCriteriaChange = (searchCriteria: string) => {
         setSearchCriteria(searchCriteria);
         let newText = searchCriteria.toLowerCase();
-        let newSearchResult = allAccTableRows.filter(r =>r.Description && r.Description.toLowerCase().includes(newText));
+        let newSearchResult = allAccTableRows.filter(r =>r.Description 
+                && r.Date 
+                && r.Description.toLowerCase().includes(newText))
+                .sort((a,b) => new Date(b.Date).getTime() - new Date(a.Date).getTime());
         if(newSearchResult.length<50){
             setSearchResultRows(newSearchResult);
         } else {
@@ -249,11 +258,16 @@ export function PgAddOrEditRow(): React.JSX.Element {
             setSearchResultRows(first50);
         }
     }
-    if(searchResultRows.length>0){
-        let s = 1;
-        let sr = searchResultRows.filter(r=>r.Id = `693UR0I3`);
-        s = 2;
-    }
+
+    const handleOnDataGridRowSelected = (rowId:string) =>{
+        let row = searchResultRows.find(r=>r.Id === rowId);
+        if(row){
+            setDCItem(row.DCItem);
+            setSum(row.Sum.toString());
+            setDescription(row.Description);
+        }
+    };
+
     return (
         <SafeAreaView>
             <View style={[{ display: 'flex', flexDirection: 'row', marginRight: 10 }, { ...fldStyles.fldCommon, ...borderStyle }]}>
@@ -267,7 +281,7 @@ export function PgAddOrEditRow(): React.JSX.Element {
                 />
             </View>
             <View style={[borderStyle, { height: 250, marginLeft: 5, marginRight: 5, marginTop: 10 }]}>
-                <SearchResultDataGrid rows={searchResultRows} />
+                <SearchResultDataGrid rows={searchResultRows} onRowSelected={handleOnDataGridRowSelected}/>
             </View>
             <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', maxWidth: 300 }}>
                 <DropDownBox itemSourse={MoneyAccounts}
