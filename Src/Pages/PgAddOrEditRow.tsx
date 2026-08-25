@@ -6,7 +6,7 @@ import { Picker } from '@react-native-picker/picker';
 import { MoneyAccounts, TAllTables, TJCommonRow, TMoneyAccount } from '../googleDoc/types';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { getProperty } from '../db/tblSettings';
-import { getColumnStyle, getColumnTextStyle, TABLE_COLUMNS } from './PgPurchases';
+import { getColumnStyle, getColumnTextStyle} from './PgPurchases';
 
 type TRadioButtonProps = {
     onClick: (isPressed: boolean) => void
@@ -161,10 +161,17 @@ function joinAllAccountTables(allTblObj: TAllTables) {
 
 type TSearchResultDataGridProps = {
     rows: TJCommonRow[],
-    onRowSelected:(rowId:string)=>void
+    onRowSelected: (rowId: string) => void
 };
 
 export function SearchResultDataGrid(props: TSearchResultDataGridProps) {
+
+    const TABLE_COLUMNS = [
+        { key: 'Sum', title: 'Sum', numeric: true, width: 40 },
+        { key: 'Description', title: 'Description', numeric: false, width: 220 },
+        { key: 'DCItem', title: 'DCItem', numeric: false, width: 120 },
+    ] as const;
+
     const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
     function handleRowPress(rowId: string) {
         setSelectedRowId(current => (current === rowId ? null : rowId));
@@ -173,13 +180,6 @@ export function SearchResultDataGrid(props: TSearchResultDataGridProps) {
 
     function formatCellValue(row: TJCommonRow, columnKey: (typeof TABLE_COLUMNS)[number]['key']) {
         const value = (row as any)[columnKey];
-        if (columnKey === 'Date') {
-            if(value){
-                let d = new Date(value);
-                return `${d.getFullYear()}-${String((d.getMonth()+1)).padStart(2, '0')}-${String((d.getDate())).padStart(2, '0')}`
-            }
-            return '';
-        }
         return value == null ? '' : String(value);
     }
 
@@ -201,9 +201,9 @@ export function SearchResultDataGrid(props: TSearchResultDataGridProps) {
                 </DataTable>
                 <ScrollView style={{ maxHeight: 450, }} nestedScrollEnabled>
                     <DataTable>
-                        {props.rows.map((row,index) => (
+                        {props.rows.map((row, index) => (
                             <DataTable.Row
-                                key={row.Id.toString+"_"+index.toString()}
+                                key={row.Id.toString + "_" + index.toString()}
                                 onPress={() => handleRowPress(row.Id)}
                                 style={selectedRowId === row.Id ? styles.selectedRow : undefined}>
                                 {TABLE_COLUMNS.map(column => (
@@ -246,22 +246,30 @@ export function PgAddOrEditRow(): React.JSX.Element {
     }, []);
     const onSearchCriteriaChange = (searchCriteria: string) => {
         setSearchCriteria(searchCriteria);
-        let newText = searchCriteria.toLowerCase();
-        let newSearchResult = allAccTableRows.filter(r =>r.Description 
-                && r.Date 
-                && r.Description.toLowerCase().includes(newText))
-                .sort((a,b) => new Date(b.Date).getTime() - new Date(a.Date).getTime());
-        if(newSearchResult.length<50){
-            setSearchResultRows(newSearchResult);
-        } else {
-            let first50 = newSearchResult.slice(0,50);
-            setSearchResultRows(first50);
+        const normalize = (str: string) => str.toLowerCase().replace(/ё/g, 'е');
+        const newText = normalize(searchCriteria);
+        let newSearchResult = allAccTableRows.filter(r => r.Description
+            && r.Date
+            && normalize(r.Description).includes(newText))
+            .sort((a, b) => new Date(b.Date).getTime() - new Date(a.Date).getTime());
+        const lengthLimit = 50;
+        if (newSearchResult.length >= lengthLimit) {
+            let firstN = newSearchResult.slice(0, lengthLimit);
+            newSearchResult = firstN;
         }
+        const sumList = [...new Set(newSearchResult.map(r => r.Sum))];
+        const finalList: TJCommonRow[] = [];
+        newSearchResult.forEach(itm => {
+            if (!finalList.find(flItm => flItm.Sum == itm.Sum)) {
+                finalList.push(itm);
+            }
+        });
+        setSearchResultRows(finalList);
     }
 
-    const handleOnDataGridRowSelected = (rowId:string) =>{
-        let row = searchResultRows.find(r=>r.Id === rowId);
-        if(row){
+    const handleOnDataGridRowSelected = (rowId: string) => {
+        let row = searchResultRows.find(r => r.Id === rowId);
+        if (row) {
             setDCItem(row.DCItem);
             setSum(row.Sum.toString());
             setDescription(row.Description);
@@ -281,7 +289,7 @@ export function PgAddOrEditRow(): React.JSX.Element {
                 />
             </View>
             <View style={[borderStyle, { height: 250, marginLeft: 5, marginRight: 5, marginTop: 10 }]}>
-                <SearchResultDataGrid rows={searchResultRows} onRowSelected={handleOnDataGridRowSelected}/>
+                <SearchResultDataGrid rows={searchResultRows} onRowSelected={handleOnDataGridRowSelected} />
             </View>
             <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', maxWidth: 300 }}>
                 <DropDownBox itemSourse={MoneyAccounts}
