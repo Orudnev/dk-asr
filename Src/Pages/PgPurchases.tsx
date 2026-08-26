@@ -69,7 +69,6 @@ export default function PgPurchases() {
     const allTables = await getProperty<TAllTables>('allTables');
     const loadedRows = allTables?.JCommon.filter(r => r.Status < 3) ?? [];
     setRows(loadedRows);
-    setSelectedRowId(null);
     const newTotals = await getTotals();
     setTotals(newTotals);
     setIsLoading(false);
@@ -100,6 +99,10 @@ export default function PgPurchases() {
   }
   function handleRowPress(rowId: string) {
     setSelectedRowId(current => (current === rowId ? null : rowId));
+    const currRow = rows.find(r=>r.Id === rowId);
+    if(appContext && currRow){
+      appContext.setCurrRow(currRow);
+    } 
   }
 
   return (

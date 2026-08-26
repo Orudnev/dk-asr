@@ -1,12 +1,13 @@
 import { useContext, useState, useMemo, useEffect } from 'react';
-import { StyleSheet, View, Text, TextInput, ScrollView } from "react-native";
+import { StyleSheet, View, Text, TextInput, ScrollView, Keyboard } from "react-native";
 import { Button, Icon, ActivityIndicator, DataTable } from 'react-native-paper';
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Picker } from '@react-native-picker/picker';
 import { MoneyAccounts, TAllTables, TJCommonRow, TMoneyAccount } from '../googleDoc/types';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { getProperty } from '../db/tblSettings';
-import { getColumnStyle, getColumnTextStyle} from './PgPurchases';
+import { getColumnTextStyle } from './PgPurchases';
+import { AppContext } from '../../App';
 
 type TRadioButtonProps = {
     onClick: (isPressed: boolean) => void
@@ -86,7 +87,6 @@ export type TDropDownBoxProps = {
 }
 
 export function DropDownBox(props: TDropDownBoxProps) {
-    const [selectedItem, setSelectedItem] = useState(props.selItem);
     const getValue = (itm: any) => {
         if (typeof (itm) == 'object' && props.valueField && itm.hasOwnProperty(props.valueField)) {
             return itm[props.valueField];
@@ -118,9 +118,9 @@ export function DropDownBox(props: TDropDownBoxProps) {
                 }
                 return itm == newval;
             });
-            setSelectedItem(newItem);
+            props.onChange(newItem);
         } else {
-            setSelectedItem(newval);
+            props.onChange(newval);
         }
     };
 
@@ -132,7 +132,7 @@ export function DropDownBox(props: TDropDownBoxProps) {
         <View style={{ display: 'flex', flexDirection: 'row' }}>
             <View style={{ ...props.fldStyle, ...fldStyles.fldCommon, ...borderStyle }}>
                 <Picker
-                    selectedValue={getValue(selectedItem)}
+                    selectedValue={getValue(props.selItem)}
                     onValueChange={(itemValue: any) => {
                         setValue(itemValue);
                         props.onChange(itemValue);
@@ -164,6 +164,8 @@ type TSearchResultDataGridProps = {
     onRowSelected: (rowId: string) => void
 };
 
+
+
 export function SearchResultDataGrid(props: TSearchResultDataGridProps) {
 
     const TABLE_COLUMNS = [
@@ -171,6 +173,20 @@ export function SearchResultDataGrid(props: TSearchResultDataGridProps) {
         { key: 'Description', title: 'Description', numeric: false, width: 220 },
         { key: 'DCItem', title: 'DCItem', numeric: false, width: 120 },
     ] as const;
+
+
+    function getColumnStyle(column: (typeof TABLE_COLUMNS)[number]) {
+        return [
+            styles.column,
+            { width: column.width },
+            !column.numeric && styles.textColumn,
+            column.numeric && styles.numberColumn
+        ];
+    }
+    function getColumnTextStyle(column: (typeof TABLE_COLUMNS)[number]) {
+        return !column.numeric ? styles.leftAlignedText : undefined;
+    }
+
 
     const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
     function handleRowPress(rowId: string) {
@@ -225,6 +241,7 @@ export function SearchResultDataGrid(props: TSearchResultDataGridProps) {
 }
 
 export function PgAddOrEditRow(): React.JSX.Element {
+    const appContext = useContext(AppContext);
     const [searchCriteria, setSearchCriteria] = useState('');
     const [destTable, setDestTable] = useState<TMoneyAccount>('BnBish');
     const [date, setDate] = useState<Date>(new Date());
@@ -244,26 +261,49 @@ export function PgAddOrEditRow(): React.JSX.Element {
         };
         loadTables();
     }, []);
+    useEffect(() => {
+        if (searchResultRows.length === 1) {
+            handleOnDataGridRowSelected(searchResultRows[0].Id);
+            Keyboard.dismiss();
+        }
+    }, [searchResultRows]);
+    useEffect(() => {
+        if (appContext && appContext.currRow) {
+            setDestTable(appContext.currRow.DestTable);
+            setDate(appContext.currRow.Date);
+            setDCItem(appContext.currRow.DCItem);
+            setDest(appContext.currRow.Dest);
+            setSum(appContext.currRow.Sum.toString());
+            setDescription(appContext.currRow.Description);
+        }
+
+    }, [appContext?.currPage])
+
     const onSearchCriteriaChange = (searchCriteria: string) => {
         setSearchCriteria(searchCriteria);
         const normalize = (str: string) => str.toLowerCase().replace(/ё/g, 'е');
-        const newText = normalize(searchCriteria);
-        let newSearchResult = allAccTableRows.filter(r => r.Description
-            && r.Date
-            && normalize(r.Description).includes(newText))
+        const words = searchCriteria.split(' ');
+        const searchDescript = normalize(words[0]);
+        const searchSum = words.length > 1 ? words[1] : "";
+        let newSearchResult = allAccTableRows.filter(r => r.Description && r.Date).filter(r => {
+            const srchDescriptResult = normalize(r.Description).includes(searchDescript);
+            return srchDescriptResult;
+        })
             .sort((a, b) => new Date(b.Date).getTime() - new Date(a.Date).getTime());
         const lengthLimit = 50;
         if (newSearchResult.length >= lengthLimit) {
             let firstN = newSearchResult.slice(0, lengthLimit);
             newSearchResult = firstN;
         }
-        const sumList = [...new Set(newSearchResult.map(r => r.Sum))];
-        const finalList: TJCommonRow[] = [];
+        let finalList: TJCommonRow[] = [];
         newSearchResult.forEach(itm => {
             if (!finalList.find(flItm => flItm.Sum == itm.Sum)) {
                 finalList.push(itm);
             }
         });
+        if (searchSum) {
+            finalList = finalList.filter(r => r.Sum === parseInt(searchSum));
+        }
         setSearchResultRows(finalList);
     }
 
@@ -370,6 +410,7 @@ const fldStyles = StyleSheet.create({
         width: 140
     },
 
+
 });
 
 const styles = StyleSheet.create({
@@ -400,7 +441,21 @@ const styles = StyleSheet.create({
         lineHeight: 24,
         color: '#d9f0ea',
     },
+    column: {
+        flexGrow: 0,
+        flexShrink: 0,
+    },
+
     selectedRow: {
         backgroundColor: 'rgba(187, 134, 252, 0.18)',
+    },
+    textColumn: {
+        justifyContent: 'flex-start',
+    },
+    numberColumn: {
+        marginRight: 10
+    },
+    leftAlignedText: {
+        textAlign: 'left',
     },
 });

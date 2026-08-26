@@ -6,11 +6,14 @@ import PgSettings from './Src/Pages/PgSettings';
 import { RegisterDebugAPI } from './Src/debug/debug';
 import { TestASR } from './Src/Pages/TestASR';
 import { PgAddOrEditRow } from './Src/Pages/PgAddOrEditRow';
+import { TJCommonRow } from './Src/googleDoc/types';
 
-export type TPages = 'purchases' | 'settings'|'addOrEditRow'|'test';
+export type TPages = 'purchases' | 'settings' | 'addOrEditRow' | 'test';
 type AppContextType = {
     currPage: TPages;
     setCurrPage: (page: TPages) => void | Promise<void>;
+    currRow:TJCommonRow|undefined;
+    setCurrRow:(row:TJCommonRow)=> void;
 };
 export const AppContext = createContext<AppContextType | null>(null);
 type AppRoute = {
@@ -20,7 +23,7 @@ type AppRoute = {
 };
 const APP_ROUTES: AppRoute[] = [
     { key: 'purchases', title: 'Purchases', focusedIcon: 'cart' },
-    { key: 'addOrEditRow', title: 'Item', focusedIcon: 'pencil' },
+    { key: 'addOrEditRow', title: 'Edit', focusedIcon: 'pencil' },
     { key: 'settings', title: 'Settings', focusedIcon: 'cog-outline' },
     { key: 'test', title: 'Test', focusedIcon: 'ev-plug-chademo' }
 ];
@@ -28,6 +31,7 @@ const APP_ROUTES: AppRoute[] = [
 
 export default function App() {
     const [currPage, setCurrPage] = useState<TPages>('purchases');
+    const [currRow, setCurrRow] = useState<TJCommonRow|undefined>();
     const isDark = useColorScheme() === 'dark';
     const navigationIndex = useMemo(
         () => {
@@ -58,7 +62,7 @@ export default function App() {
 
     return (
         <PaperProvider theme={MD3DarkTheme}>
-            <AppContext.Provider value={{ currPage, setCurrPage: handlePageChange }}>
+            <AppContext.Provider value={{ currPage, setCurrPage: handlePageChange,currRow,setCurrRow }}>
                 <View
                     style={{
                         flex: 1,
@@ -86,7 +90,7 @@ export default function App() {
                                 case 'addOrEditRow':
                                     return <PgAddOrEditRow />;
                                 case 'settings':
-                                    return <PgSettings />;                                    
+                                    return <PgSettings />;
                                 case 'test':
                                     return <TestASR />;
                             }
