@@ -124,10 +124,6 @@ export function DropDownBox(props: TDropDownBoxProps) {
         }
     };
 
-    if (props.selItem != 'BnBish') {
-        let s = 1;
-    }
-
     return (
         <View style={{ display: 'flex', flexDirection: 'row' }}>
             <View style={{ ...props.fldStyle, ...fldStyles.fldCommon, ...borderStyle }}>
@@ -316,6 +312,14 @@ export function PgAddOrEditRow(): React.JSX.Element {
         }
     };
 
+    const handleSaveButtonPress = () => {
+        
+    };
+
+    const hanldeAddNewButtonPress = () => {
+
+    }
+
     return (
         <SafeAreaView>
             <View style={[{ display: 'flex', flexDirection: 'row', marginRight: 10 }, { ...fldStyles.fldCommon, ...borderStyle }]}>
@@ -368,6 +372,10 @@ export function PgAddOrEditRow(): React.JSX.Element {
                         />
                     </View>
                 </View>
+            </View>
+            <View style={[{ display: 'flex', flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginLeft: 5, marginRight: 5, marginTop: 40, gap: 100 }]}>
+                <Button mode="outlined" icon="content-save-edit" onPress={handleSaveButtonPress}>Save</Button>
+                <Button mode="outlined" icon="content-save-plus" onPress={hanldeAddNewButtonPress}>New</Button>
             </View>
         </SafeAreaView>
     );
