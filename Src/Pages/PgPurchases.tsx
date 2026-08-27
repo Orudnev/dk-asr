@@ -1,12 +1,13 @@
 import React, { useCallback, useContext, useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
-import { Appbar, Button, DataTable, Text } from 'react-native-paper';
+import { Appbar, Button, DataTable, Icon, Text } from 'react-native-paper';
 import { AppContext } from '../../App';
 import { getProperty } from '../db/tblSettings';
 import { TAllTables, TJCommonRow, TTotals } from '../googleDoc/types';
 import { getTotals, updateDataFromCloud } from '../googleDoc/helper';
 import { Pgstyle } from './pgStyle';
 import { lightGreen100, lightGreen500 } from 'react-native-paper/lib/typescript/styles/themes/v2/colors';
+import DataTableCell from 'react-native-paper/lib/typescript/components/DataTable/DataTableCell';
 
 export const TABLE_COLUMNS = [
   { key: 'Sum', title: 'Sum', numeric: true, width: 50 },
@@ -63,6 +64,7 @@ export default function PgPurchases() {
   const [rows, setRows] = useState<TJCommonRow[]>([]);
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
   const [totals, setTotals] = useState<TTotals>({ BnBish: 0, BnSok: 0, BnMb: 0, Nal: 0 });
+  const [multiSelect, setMultiSelect] = useState(false);
 
   const reloadData = useCallback(async () => {
     setIsLoading(true);
@@ -99,11 +101,12 @@ export default function PgPurchases() {
   }
   function handleRowPress(rowId: string) {
     setSelectedRowId(current => (current === rowId ? null : rowId));
-    const currRow = rows.find(r=>r.Id === rowId);
-    if(appContext && currRow){
+    const currRow = rows.find(r => r.Id === rowId);
+    if (appContext && currRow) {
       appContext.setCurrRow(currRow);
-    } 
+    }
   }
+
 
   return (
     <View style={[Pgstyle.clientArea, styles.page]}>
@@ -114,12 +117,21 @@ export default function PgPurchases() {
       <Totals {...totals}></Totals>
       <View style={[Pgstyle.commandButtons]}>
         <Button mode="outlined" icon="reload" onPress={loadDataFromCloud}>Reload</Button>
+        <Button mode="outlined" onPress={() => { setMultiSelect(!multiSelect) }}><Icon source="check-outline" size={20} /></Button>
       </View>
       <View style={styles.tableWrapper}>
         <ScrollView horizontal showsHorizontalScrollIndicator>
           <View>
             <DataTable>
               <DataTable.Header>
+                {multiSelect && (
+                  <DataTable.Title
+                    key={'checkColumn'}>
+                    <View style={{ marginTop: 5 }}>
+                      <Icon source="check-outline" size={15} />
+                    </View>
+                  </DataTable.Title>
+                )}
                 {TABLE_COLUMNS.map(column => (
                   <DataTable.Title
                     key={column.key}
@@ -138,6 +150,15 @@ export default function PgPurchases() {
                     key={row.Id}
                     onPress={() => handleRowPress(row.Id)}
                     style={selectedRowId === row.Id ? styles.selectedRow : undefined}>
+                    {multiSelect && (
+                      <DataTable.Cell key="checkColumn">
+                        {row.Sum == 500 && (
+                          <View >
+                            <Icon source="check-outline" size={15} />
+                          </View>
+                        )}
+                      </DataTable.Cell>
+                    )}
                     {TABLE_COLUMNS.map(column => (
                       <DataTable.Cell
                         key={column.key}
