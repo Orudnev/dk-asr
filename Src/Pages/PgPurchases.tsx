@@ -68,11 +68,13 @@ export default function PgPurchases() {
   const [selectAllCheckBox, setSelectAllCheckBox] = useState(false);
   const [selectedRowIds, setSelectedRowIds] = useState<string[]>([]);
   const [menuVisibility, setMenuVisibility] = useState(false);
-  const [dlgGroupEditVisibility,setDlgGroupEditVisibility] = useState(false);
+  const [dlgGroupEditVisibility, setDlgGroupEditVisibility] = useState(false);
+  const [destItems, setDestItems] = useState<string[]>([]);
 
   const reloadData = useCallback(async () => {
     setIsLoading(true);
     const allTables = await getProperty<TAllTables>('allTables');
+    setDestItems(allTables.Dest);
     const loadedRows = allTables?.JCommon.filter(r => r.Status < 3) ?? [];
     setRows(loadedRows);
     const newTotals = await getTotals();
@@ -111,14 +113,15 @@ export default function PgPurchases() {
     }
   }
 
-
+  const dlgInitRow = rows.find(r => r.Id === selectedRowIds[0]);
   return (
     <View style={[Pgstyle.clientArea, styles.page]}>
-      <DlgGroupEdit show={dlgGroupEditVisibility} 
-        initValues={rows.find(r=>r.Id === selectedRowIds[0])}
-        onApplyButtonClick={()=>{}}
-        onCancelButtonClick={()=>{setDlgGroupEditVisibility(false)}}
-       />
+      <DlgGroupEdit show={dlgGroupEditVisibility}
+        initValues={dlgInitRow}
+        destList={destItems}
+        onApplyButtonClick={() => { }}
+        onCancelButtonClick={() => { setDlgGroupEditVisibility(false) }}
+      />
       <Appbar.Header>
         <Appbar.Action icon="cart" accessibilityLabel="Purchases" />
         <Appbar.Content title="Purchases" />
@@ -151,6 +154,7 @@ export default function PgPurchases() {
               <Menu.Item
                 onPress={() => {
                   setDlgGroupEditVisibility(true);
+                  setMenuVisibility(false);
                 }}
                 title="Group edit"
               />

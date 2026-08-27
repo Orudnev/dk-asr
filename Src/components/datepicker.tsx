@@ -3,26 +3,44 @@ import { View, Text, StyleSheet, } from "react-native";
 import DateTimePicker from '@react-native-community/datetimepicker';
 
 export type TDatePickerProps = {
+    wildCardInitialValue?:string,
     initialValue: Date,
     onChange: (d: Date) => void
 }
 
+function toDateStr(d:Date){
+    const result = d.getFullYear()+"."+String(d.getMonth()+1).padStart(2,'0')+"."+String(d.getDate()).padStart(2,'0');
+    return result;
+}
+function strToDate(dstr:string){
+    const date = new Date(dstr.replace(/\./g, '/'));
+    return date;
+}
+
+
 export function DatePicker(props: TDatePickerProps) {
-    const [selectedDate, setSelectedDate] = useState(props.initialValue);
+    const [selectedDate, setSelectedDate] = useState<string>(props.wildCardInitialValue?props.wildCardInitialValue:toDateStr(props.initialValue));
     const [show, setShow] = useState(false);
     const onChange = (event: any, newDate?: Date) => {
         setShow(false);
         if (newDate) {
-            setSelectedDate(newDate);
+            setSelectedDate(toDateStr(newDate));
             props.onChange(newDate);
         }
     };
     return (
         <View style={[styles.container]}>
-            <Text style={[{ marginTop: 5 }, styles.value, styles.datePickerText]} onPress={() => setShow(true)}>{selectedDate.toLocaleDateString()}</Text>
+            <Text 
+                style={[{ marginTop: 5 }, styles.value, styles.datePickerText]} 
+                onPress={() => {
+                    setShow(true)
+                }}
+                >
+                    {selectedDate}
+            </Text>
             {show && (
                 <DateTimePicker
-                    value={selectedDate}
+                    value={selectedDate === props.wildCardInitialValue?props.initialValue:strToDate(selectedDate)}
                     mode="date"
                     display="default"
                     onChange={onChange}
@@ -46,9 +64,6 @@ const styles = StyleSheet.create({
         borderRadius: 12,
     },
     value: {
-        // borderStyle:'solid',
-        // borderWidth:1,
-        // borderColor:'red',
         width: '85%',
         paddingLeft: 10,
         paddingTop: 8,
