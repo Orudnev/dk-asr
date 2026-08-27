@@ -114,7 +114,11 @@ export default function PgPurchases() {
 
   return (
     <View style={[Pgstyle.clientArea, styles.page]}>
-      <DlgGroupEdit show={dlgGroupEditVisibility} />
+      <DlgGroupEdit show={dlgGroupEditVisibility} 
+        initValues={rows.find(r=>r.Id === selectedRowIds[0])}
+        onApplyButtonClick={()=>{}}
+        onCancelButtonClick={()=>{setDlgGroupEditVisibility(false)}}
+       />
       <Appbar.Header>
         <Appbar.Action icon="cart" accessibilityLabel="Purchases" />
         <Appbar.Content title="Purchases" />
