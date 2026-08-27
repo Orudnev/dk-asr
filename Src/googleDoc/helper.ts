@@ -94,3 +94,13 @@ export async function getTotals(): Promise<TTotals> {
     });
     return result;
 }
+
+export function generatePseudoUniqueId(){
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    const timestamp = Date.now().toString(36).toUpperCase().slice(-4); // Берем последние 4 символа от числа в 36-ричной системе
+    const randomPart = Array.from({ length: 4 }, () =>
+        chars[Math.floor(Math.random() * chars.length)]
+    ).join("");
+
+    return timestamp + randomPart;
+}

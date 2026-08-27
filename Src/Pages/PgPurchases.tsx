@@ -9,7 +9,7 @@ import { Pgstyle } from './pgStyle';
 import { lightGreen100, lightGreen500 } from 'react-native-paper/lib/typescript/styles/themes/v2/colors';
 
 export const TABLE_COLUMNS = [
-  { key: 'Sum', title: 'Sum', numeric: true, width: 40 },
+  { key: 'Sum', title: 'Sum', numeric: true, width: 50 },
   { key: 'Description', title: 'Description', numeric: false, width: 120 },
   { key: 'DestTable', title: 'DstTbl', numeric: false, width: 50 },
   { key: 'Date', title: 'Date', numeric: false, width: 80 },

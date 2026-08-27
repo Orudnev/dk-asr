@@ -5,9 +5,10 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Picker } from '@react-native-picker/picker';
 import { MoneyAccounts, TAllTables, TJCommonRow, TMoneyAccount } from '../googleDoc/types';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { getProperty } from '../db/tblSettings';
+import { getProperty, setProperty } from '../db/tblSettings';
 import { getColumnTextStyle } from './PgPurchases';
 import { AppContext } from '../../App';
+import { generatePseudoUniqueId } from '../googleDoc/helper';
 
 type TRadioButtonProps = {
     onClick: (isPressed: boolean) => void
@@ -248,6 +249,7 @@ export function PgAddOrEditRow(): React.JSX.Element {
     const [allTables, setAllTables] = useState<TAllTables | null>(null);
     const [allAccTableRows, setAllAccTableRows] = useState<TJCommonRow[]>([]);
     const [searchResultRows, setSearchResultRows] = useState<TJCommonRow[]>([]);
+    const [editMode, setEditMode] = useState(false);
     useEffect(() => {
         const loadTables = async () => {
             const data = await getProperty<TAllTables>('allTables');
@@ -312,14 +314,53 @@ export function PgAddOrEditRow(): React.JSX.Element {
         }
     };
 
+    const copyValuesToJCommonRow = (rowId: string) => {
+        if (allTables && allTables.JCommon && appContext ) {
+            if (rowId) {
+                var cr = allTables.JCommon.find(r => r.Id == rowId);
+            } else {
+                cr = {Id:generatePseudoUniqueId(),Date:date,DCItem:DCItem,DestTable:'BnBish',Dest:'Биш',Description:description,Sum:0,Sign:1,Status:0,AddRowTime:new Date()};
+            }
+
+            let sign = 1;
+            if (cr) {
+                const currDcItem = allTables.DCItems.find(r => r.Dest === dest);
+                if (currDcItem) {
+                    sign = currDcItem.Sign;
+                }
+                cr.Date = date;
+                cr.DCItem = DCItem;
+                cr.Dest = dest;
+                cr.Description = description;
+                cr.Sum = parseInt(sum);
+                cr.Sign = sign;
+                return cr;
+            }
+        }
+        return undefined;
+    };
+
     const handleSaveButtonPress = () => {
-        
+        if (appContext && appContext.currRow) {
+            const cr = copyValuesToJCommonRow(appContext.currRow.Id);
+            if (cr && allTables) {
+                setProperty('allTables', allTables);
+            }
+        }
+        setEditMode(false);
+        Keyboard.dismiss();
     };
 
     const hanldeAddNewButtonPress = () => {
-
+        const cr = copyValuesToJCommonRow('');
+        if(cr && allTables){
+            allTables.JCommon.push(cr);
+            setProperty('allTables', allTables);
+        }
+        setEditMode(false);
+        Keyboard.dismiss();
     }
-
+    const searchGridHeight = editMode ? 50 : 250;
     return (
         <SafeAreaView>
             <View style={[{ display: 'flex', flexDirection: 'row', marginRight: 10 }, { ...fldStyles.fldCommon, ...borderStyle }]}>
@@ -332,7 +373,7 @@ export function PgAddOrEditRow(): React.JSX.Element {
                     }}
                 />
             </View>
-            <View style={[borderStyle, { height: 250, marginLeft: 5, marginRight: 5, marginTop: 10 }]}>
+            <View style={[borderStyle, { height: searchGridHeight, marginLeft: 5, marginRight: 5, marginTop: 10 }]}>
                 <SearchResultDataGrid rows={searchResultRows} onRowSelected={handleOnDataGridRowSelected} />
             </View>
             <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', maxWidth: 300 }}>
@@ -340,7 +381,7 @@ export function PgAddOrEditRow(): React.JSX.Element {
                     fldStyle={fldStyles.destTable}
                     selItem={destTable}
                     onChange={(newitm) => {
-                        setDCItem(newitm);
+                        setDestTable(newitm);
                     }}
                 />
                 <DatePicker initialValue={date} onChange={setDate} />
@@ -361,6 +402,7 @@ export function PgAddOrEditRow(): React.JSX.Element {
                 <View style={{ display: 'flex', flexDirection: 'row' }}>
                     <View style={{ ...fldStyles.Sum, ...fldStyles.fldCommon, ...borderStyle }}>
                         <TextInput style={styles.value} value={sum.toString()}
+                            onFocus={() => setEditMode(true)}
                             onChangeText={setSum}
                             keyboardType='numeric' />
                     </View>
@@ -368,14 +410,15 @@ export function PgAddOrEditRow(): React.JSX.Element {
                 <View style={{ display: 'flex', flexDirection: 'row' }}>
                     <View style={{ ...fldStyles.Description, ...fldStyles.fldCommon, ...borderStyle }}>
                         <TextInput style={styles.value} value={description}
+                            onFocus={() => setEditMode(true)}
                             onChangeText={setDescription}
                         />
                     </View>
                 </View>
             </View>
             <View style={[{ display: 'flex', flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginLeft: 5, marginRight: 5, marginTop: 40, gap: 100 }]}>
-                <Button mode="outlined" icon="content-save-edit" onPress={handleSaveButtonPress}>Save</Button>
-                <Button mode="outlined" icon="content-save-plus" onPress={hanldeAddNewButtonPress}>New</Button>
+                <Button mode="outlined" icon="content-save-edit" onPress={handleSaveButtonPress} disabled={!appContext || !appContext.currRow} style={styles.saveNewButton}>Save</Button>
+                <Button mode="outlined" icon="content-save-plus" onPress={hanldeAddNewButtonPress} style={styles.saveNewButton}>New</Button>
             </View>
         </SafeAreaView>
     );
@@ -466,4 +509,7 @@ const styles = StyleSheet.create({
     leftAlignedText: {
         textAlign: 'left',
     },
+    saveNewButton: {
+        width: 120
+    }
 });
