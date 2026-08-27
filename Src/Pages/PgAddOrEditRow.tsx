@@ -2,13 +2,16 @@ import { useContext, useState, useMemo, useEffect } from 'react';
 import { StyleSheet, View, Text, TextInput, ScrollView, Keyboard } from "react-native";
 import { Button, Icon, ActivityIndicator, DataTable } from 'react-native-paper';
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Picker } from '@react-native-picker/picker';
+
 import { MoneyAccounts, TAllTables, TJCommonRow, TMoneyAccount } from '../googleDoc/types';
-import DateTimePicker from '@react-native-community/datetimepicker';
+
 import { getProperty, setProperty } from '../db/tblSettings';
 import { getColumnTextStyle } from './PgPurchases';
 import { AppContext } from '../../App';
 import { generatePseudoUniqueId } from '../googleDoc/helper';
+import { DropDownBox } from '../components/dropdownbox';
+import { SearchResultDataGrid } from '../components/searchresultdatagrid';
+import { DatePicker } from '../components/datepicker';
 
 type TRadioButtonProps = {
     onClick: (isPressed: boolean) => void
@@ -48,104 +51,6 @@ const btnStyles = StyleSheet.create({
     }
 });
 
-export type TDatePickerProps = {
-    initialValue: Date,
-    onChange: (d: Date) => void
-}
-
-export function DatePicker(props: TDatePickerProps) {
-    const [selectedDate, setSelectedDate] = useState(props.initialValue);
-    const [show, setShow] = useState(false);
-    const onChange = (event: any, newDate?: Date) => {
-        setShow(false);
-        if (newDate) {
-            setSelectedDate(newDate);
-            props.onChange(newDate);
-        }
-    };
-    return (
-        <View style={[{ ...fldStyles.selectedDate, ...fldStyles.fldCommon, ...borderStyle }, { display: 'flex', flexDirection: 'row' }]}>
-            <Text style={[{ marginTop: 5 }, styles.value, fldStyles.datePickerText]} onPress={() => setShow(true)}>{selectedDate.toLocaleDateString()}</Text>
-            {show && (
-                <DateTimePicker
-                    value={selectedDate}
-                    mode="date"
-                    display="default"
-                    onChange={onChange}
-                />
-            )}
-        </View>
-    )
-}
-
-export type TDropDownBoxProps = {
-    itemSourse?: any[],
-    labelField?: string,
-    valueField?: string,
-    selItem: any,
-    fldStyle?: any,
-    onChange: (newValue: any) => void
-}
-
-export function DropDownBox(props: TDropDownBoxProps) {
-    const getValue = (itm: any) => {
-        if (typeof (itm) == 'object' && props.valueField && itm.hasOwnProperty(props.valueField)) {
-            return itm[props.valueField];
-        }
-        return itm;
-    };
-    const getLabel = (itm: any) => {
-        if (typeof (itm) == 'object' && props.valueField && props.labelField && itm.hasOwnProperty(props.labelField)) {
-            return itm[props.labelField];
-        }
-        return itm;
-    };
-
-    if (!props.itemSourse) {
-        return (
-            <View style={{ display: 'flex', flexDirection: 'row' }}>
-                <View style={{ ...props.fldStyle, ...fldStyles.fldCommon, ...borderStyle }}>
-                    <ActivityIndicator animating={true} />
-                </View>
-            </View>
-        );
-    }
-
-    const setValue = (newval: any) => {
-        if (typeof (props.selItem) == 'object' && props.itemSourse && props.valueField && props.selItem.hasOwnProperty(props.valueField)) {
-            let newItem = props.itemSourse.find(itm => {
-                if (props.valueField && itm[props.valueField] == newval) {
-                    return true;
-                }
-                return itm == newval;
-            });
-            props.onChange(newItem);
-        } else {
-            props.onChange(newval);
-        }
-    };
-
-    return (
-        <View style={{ display: 'flex', flexDirection: 'row' }}>
-            <View style={{ ...props.fldStyle, ...fldStyles.fldCommon, ...borderStyle }}>
-                <Picker
-                    selectedValue={getValue(props.selItem)}
-                    onValueChange={(itemValue: any) => {
-                        setValue(itemValue);
-                        props.onChange(itemValue);
-                    }}
-                    mode="dropdown">
-                    {props.itemSourse.map(itm => {
-                        let label = getLabel(itm);
-                        let value = getValue(itm);
-                        return (<Picker.Item key={value} label={label} value={value} />);
-                    })
-                    }
-                </Picker>
-            </View>
-        </View>
-    );
-}
 
 function joinAllAccountTables(allTblObj: TAllTables) {
     const getRows = (tblName: string) => {
@@ -154,87 +59,6 @@ function joinAllAccountTables(allTblObj: TAllTables) {
     };
     const joinedTable = [...getRows("BnBish"), ...getRows("BnSok"), ...getRows("BnMb"), ...getRows("Nal")];
     return joinedTable as TJCommonRow[];
-}
-
-type TSearchResultDataGridProps = {
-    rows: TJCommonRow[],
-    onRowSelected: (rowId: string) => void
-};
-
-
-
-export function SearchResultDataGrid(props: TSearchResultDataGridProps) {
-
-    const TABLE_COLUMNS = [
-        { key: 'Sum', title: 'Sum', numeric: true, width: 40 },
-        { key: 'Description', title: 'Description', numeric: false, width: 220 },
-        { key: 'DCItem', title: 'DCItem', numeric: false, width: 120 },
-    ] as const;
-
-
-    function getColumnStyle(column: (typeof TABLE_COLUMNS)[number]) {
-        return [
-            styles.column,
-            { width: column.width },
-            !column.numeric && styles.textColumn,
-            column.numeric && styles.numberColumn
-        ];
-    }
-    function getColumnTextStyle(column: (typeof TABLE_COLUMNS)[number]) {
-        return !column.numeric ? styles.leftAlignedText : undefined;
-    }
-
-
-    const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
-    function handleRowPress(rowId: string) {
-        setSelectedRowId(current => (current === rowId ? null : rowId));
-        props.onRowSelected(rowId);
-    }
-
-    function formatCellValue(row: TJCommonRow, columnKey: (typeof TABLE_COLUMNS)[number]['key']) {
-        const value = (row as any)[columnKey];
-        return value == null ? '' : String(value);
-    }
-
-    return (
-        <ScrollView horizontal showsHorizontalScrollIndicator>
-            <View>
-                <DataTable>
-                    <DataTable.Header>
-                        {TABLE_COLUMNS.map(column => (
-                            <DataTable.Title
-                                key={column.key}
-                                numeric={column.numeric}
-                                style={getColumnStyle(column)}
-                                textStyle={getColumnTextStyle(column)}>
-                                {column.title}
-                            </DataTable.Title>
-                        ))}
-                    </DataTable.Header>
-                </DataTable>
-                <ScrollView style={{ maxHeight: 450, }} nestedScrollEnabled>
-                    <DataTable>
-                        {props.rows.map((row, index) => (
-                            <DataTable.Row
-                                key={row.Id.toString + "_" + index.toString()}
-                                onPress={() => handleRowPress(row.Id)}
-                                style={selectedRowId === row.Id ? styles.selectedRow : undefined}>
-                                {TABLE_COLUMNS.map(column => (
-                                    <DataTable.Cell
-                                        key={column.key}
-                                        numeric={column.numeric}
-                                        style={getColumnStyle(column)}
-                                        textStyle={getColumnTextStyle(column)}>
-                                        {formatCellValue(row, column.key)}
-                                    </DataTable.Cell>
-                                ))}
-                            </DataTable.Row>
-                        ))}
-                    </DataTable>
-                </ScrollView>
-            </View>
-        </ScrollView>
-    );
 }
 
 export function PgAddOrEditRow(): React.JSX.Element {
@@ -363,7 +187,7 @@ export function PgAddOrEditRow(): React.JSX.Element {
     const searchGridHeight = editMode ? 50 : 250;
     return (
         <SafeAreaView>
-            <View style={[{ display: 'flex', flexDirection: 'row', marginRight: 10 }, { ...fldStyles.fldCommon, ...borderStyle }]}>
+            <View style={[{ display: 'flex', flexDirection: 'row', marginRight: 10 }, { ...fldStyles.fldMargins, ...borderStyle }]}>
                 <RButton onClick={() => { }} />
                 <TextInput style={[styles.value, { maxWidth: 300 }]}
                     multiline={true}
@@ -378,7 +202,7 @@ export function PgAddOrEditRow(): React.JSX.Element {
             </View>
             <View style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', maxWidth: 300 }}>
                 <DropDownBox itemSourse={MoneyAccounts}
-                    fldStyle={fldStyles.destTable}
+                    fldStyle={[fldStyles.destTable,fldStyles.fldMargins,borderStyle]}
                     selItem={destTable}
                     onChange={(newitm) => {
                         setDestTable(newitm);
@@ -386,21 +210,21 @@ export function PgAddOrEditRow(): React.JSX.Element {
                 />
                 <DatePicker initialValue={date} onChange={setDate} />
                 <DropDownBox itemSourse={allTables?.DCItems.map(itm => itm.Name)}
-                    fldStyle={fldStyles.DCItem}
+                    fldStyle={[fldStyles.DCItem,fldStyles.fldMargins,borderStyle]}
                     selItem={DCItem}
                     onChange={(newitm) => {
                         setDCItem(newitm);
                     }}
                 />
                 <DropDownBox itemSourse={allTables?.Dest}
-                    fldStyle={fldStyles.Dest}
+                    fldStyle={[fldStyles.Dest,fldStyles.fldMargins,borderStyle]}
                     selItem={dest}
                     onChange={(newitm) => {
                         setDest(newitm);
                     }}
                 />
                 <View style={{ display: 'flex', flexDirection: 'row' }}>
-                    <View style={{ ...fldStyles.Sum, ...fldStyles.fldCommon, ...borderStyle }}>
+                    <View style={{ ...fldStyles.Sum, ...fldStyles.fldMargins, ...borderStyle }}>
                         <TextInput style={styles.value} value={sum.toString()}
                             onFocus={() => setEditMode(true)}
                             onChangeText={setSum}
@@ -408,7 +232,7 @@ export function PgAddOrEditRow(): React.JSX.Element {
                     </View>
                 </View>
                 <View style={{ display: 'flex', flexDirection: 'row' }}>
-                    <View style={{ ...fldStyles.Description, ...fldStyles.fldCommon, ...borderStyle }}>
+                    <View style={{ ...fldStyles.Description, ...fldStyles.fldMargins, ...borderStyle }}>
                         <TextInput style={styles.value} value={description}
                             onFocus={() => setEditMode(true)}
                             onChangeText={setDescription}
@@ -430,7 +254,7 @@ const borderStyle = {
     borderRadius: 12,
 }
 const fldStyles = StyleSheet.create({
-    fldCommon: {
+    fldMargins: {
         marginTop: 10,
         marginLeft: 5,
         minHeight: 50,
@@ -442,10 +266,7 @@ const fldStyles = StyleSheet.create({
         width: 120,
         minHeight: 50
     },
-    datePickerText: {
-        color: '#ffffff',
-        width: 120
-    },
+
     DCItem: {
         width: 195
     },
@@ -492,10 +313,7 @@ const styles = StyleSheet.create({
         lineHeight: 24,
         color: '#d9f0ea',
     },
-    column: {
-        flexGrow: 0,
-        flexShrink: 0,
-    },
+
 
     selectedRow: {
         backgroundColor: 'rgba(187, 134, 252, 0.18)',

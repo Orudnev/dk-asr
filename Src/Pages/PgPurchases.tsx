@@ -1,6 +1,6 @@
 import React, { useCallback, useContext, useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
-import { Appbar, Button, DataTable, Icon, Text, Checkbox } from 'react-native-paper';
+import { Appbar, Button, DataTable, Icon, Text, Checkbox, Menu } from 'react-native-paper';
 import { AppContext } from '../../App';
 import { getProperty } from '../db/tblSettings';
 import { TAllTables, TJCommonRow, TTotals } from '../googleDoc/types';
@@ -8,6 +8,7 @@ import { getTotals, updateDataFromCloud } from '../googleDoc/helper';
 import { Pgstyle } from './pgStyle';
 import { lightGreen100, lightGreen500 } from 'react-native-paper/lib/typescript/styles/themes/v2/colors';
 import DataTableCell from 'react-native-paper/lib/typescript/components/DataTable/DataTableCell';
+import { DlgGroupEdit } from './DlgGroupEdit';
 
 export const TABLE_COLUMNS = [
   { key: 'Sum', title: 'Sum', numeric: true, width: 50 },
@@ -66,6 +67,8 @@ export default function PgPurchases() {
   const [multiSelect, setMultiSelect] = useState(false);
   const [selectAllCheckBox, setSelectAllCheckBox] = useState(false);
   const [selectedRowIds, setSelectedRowIds] = useState<string[]>([]);
+  const [menuVisibility, setMenuVisibility] = useState(false);
+  const [dlgGroupEditVisibility,setDlgGroupEditVisibility] = useState(false);
 
   const reloadData = useCallback(async () => {
     setIsLoading(true);
@@ -111,6 +114,7 @@ export default function PgPurchases() {
 
   return (
     <View style={[Pgstyle.clientArea, styles.page]}>
+      <DlgGroupEdit show={dlgGroupEditVisibility} />
       <Appbar.Header>
         <Appbar.Action icon="cart" accessibilityLabel="Purchases" />
         <Appbar.Content title="Purchases" />
@@ -120,10 +124,42 @@ export default function PgPurchases() {
         <Button mode="outlined" icon="reload" onPress={loadDataFromCloud}>Reload</Button>
         <Button mode="outlined"
           onPress={() => { setMultiSelect(!multiSelect) }}
-          style={multiSelect?styles.selectedBackgrColor:undefined}
-          >
+          style={multiSelect ? styles.selectedBackgrColor : undefined}
+        >
           <Icon source="check-outline" size={20} />
         </Button>
+        {(multiSelect || selectedRowId) && (
+          <Menu
+            visible={menuVisibility}
+            onDismiss={() => setMenuVisibility(false)}
+            anchor={
+              <Button mode="outlined" onPress={() => setMenuVisibility(true)}><Icon source="menu" size={20} /></Button>
+            }
+          >
+            {multiSelect && (
+              <Menu.Item
+                onPress={() => {
+                }}
+                title="Delete selected"
+              />
+            )}
+            {multiSelect && (
+              <Menu.Item
+                onPress={() => {
+                  setDlgGroupEditVisibility(true);
+                }}
+                title="Group edit"
+              />
+            )}
+            {selectedRowId && (
+              <Menu.Item
+                onPress={() => {
+                }}
+                title="Repeat"
+              />
+            )}
+          </Menu>
+        )}
       </View>
       <View style={styles.tableWrapper}>
         <ScrollView horizontal showsHorizontalScrollIndicator>
