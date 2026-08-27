@@ -1,6 +1,6 @@
 import React, { useCallback, useContext, useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
-import { Appbar, Button, DataTable, Icon, Text } from 'react-native-paper';
+import { Appbar, Button, DataTable, Icon, Text, Checkbox } from 'react-native-paper';
 import { AppContext } from '../../App';
 import { getProperty } from '../db/tblSettings';
 import { TAllTables, TJCommonRow, TTotals } from '../googleDoc/types';
@@ -57,7 +57,6 @@ export function getColumnTextStyle(column: (typeof TABLE_COLUMNS)[number]) {
   return !column.numeric ? styles.leftAlignedText : undefined;
 }
 
-
 export default function PgPurchases() {
   const appContext = useContext(AppContext);
   const [isLoasing, setIsLoading] = useState(false);
@@ -65,6 +64,8 @@ export default function PgPurchases() {
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
   const [totals, setTotals] = useState<TTotals>({ BnBish: 0, BnSok: 0, BnMb: 0, Nal: 0 });
   const [multiSelect, setMultiSelect] = useState(false);
+  const [selectAllCheckBox, setSelectAllCheckBox] = useState(false);
+  const [selectedRowIds, setSelectedRowIds] = useState<string[]>([]);
 
   const reloadData = useCallback(async () => {
     setIsLoading(true);
@@ -117,7 +118,12 @@ export default function PgPurchases() {
       <Totals {...totals}></Totals>
       <View style={[Pgstyle.commandButtons]}>
         <Button mode="outlined" icon="reload" onPress={loadDataFromCloud}>Reload</Button>
-        <Button mode="outlined" onPress={() => { setMultiSelect(!multiSelect) }}><Icon source="check-outline" size={20} /></Button>
+        <Button mode="outlined"
+          onPress={() => { setMultiSelect(!multiSelect) }}
+          style={multiSelect?styles.selectedBackgrColor:undefined}
+          >
+          <Icon source="check-outline" size={20} />
+        </Button>
       </View>
       <View style={styles.tableWrapper}>
         <ScrollView horizontal showsHorizontalScrollIndicator>
@@ -125,11 +131,20 @@ export default function PgPurchases() {
             <DataTable>
               <DataTable.Header>
                 {multiSelect && (
-                  <DataTable.Title
+                  <DataTable.Title style={{ marginTop: 8 }}
                     key={'checkColumn'}>
-                    <View style={{ marginTop: 5 }}>
-                      <Icon source="check-outline" size={15} />
-                    </View>
+                    <Checkbox
+                      status={selectAllCheckBox ? 'checked' : 'unchecked'}
+                      onPress={() => {
+                        const newValue = !selectAllCheckBox;
+                        setSelectAllCheckBox(newValue);
+                        if (newValue) {
+                          setSelectedRowIds(rows.map(r => r.Id));
+                        } else {
+                          setSelectedRowIds([]);
+                        }
+                      }}
+                    />
                   </DataTable.Title>
                 )}
                 {TABLE_COLUMNS.map(column => (
@@ -152,11 +167,18 @@ export default function PgPurchases() {
                     style={selectedRowId === row.Id ? styles.selectedRow : undefined}>
                     {multiSelect && (
                       <DataTable.Cell key="checkColumn">
-                        {row.Sum == 500 && (
-                          <View >
-                            <Icon source="check-outline" size={15} />
-                          </View>
-                        )}
+                        <Checkbox
+                          status={selectedRowIds.includes(row.Id) ? 'checked' : 'unchecked'}
+                          onPress={() => {
+                            if (selectedRowIds.includes(row.Id)) {
+                              setSelectedRowIds(selectedRowIds.filter(r => r === row.Id));
+                            } else {
+                              const newList = [...selectedRowIds];
+                              newList.push(row.Id);
+                              setSelectedRowIds(newList);
+                            }
+                          }}
+                        />
                       </DataTable.Cell>
                     )}
                     {TABLE_COLUMNS.map(column => (
@@ -230,5 +252,8 @@ const styles = StyleSheet.create({
   totalItemValue: {
     fontSize: 20,
     color: '#04d454'
+  },
+  selectedBackgrColor: {
+    backgroundColor: '#3eac44'
   }
 });
