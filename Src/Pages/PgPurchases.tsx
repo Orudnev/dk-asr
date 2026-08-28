@@ -4,12 +4,11 @@ import { Appbar, Button, DataTable, Icon, Text, Checkbox, Menu } from 'react-nat
 import { AppContext } from '../../App';
 import { getProperty, setProperty } from '../db/tblSettings';
 import { TAllTables, TJCommonRow, TMoneyAccount, TTotals } from '../googleDoc/types';
-import { getTotals, updateDataFromCloud } from '../googleDoc/helper';
+import { generatePseudoUniqueId, getTotals, updateDataFromCloud } from '../googleDoc/helper';
 import { Pgstyle } from './pgStyle';
-import { lightGreen100, lightGreen500 } from 'react-native-paper/lib/typescript/styles/themes/v2/colors';
-import DataTableCell from 'react-native-paper/lib/typescript/components/DataTable/DataTableCell';
 import { DlgGroupEdit } from './DlgGroupEdit';
 import { dateToStr } from '../components/datepicker';
+import { DatePickerModal} from 'react-native-paper-dates';
 
 export const TABLE_COLUMNS = [
   { key: 'Sum', title: 'Sum', numeric: true, width: 50 },
@@ -71,6 +70,7 @@ export default function PgPurchases() {
   const [menuVisibility, setMenuVisibility] = useState(false);
   const [dlgGroupEditVisibility, setDlgGroupEditVisibility] = useState(false);
   const [destItems, setDestItems] = useState<string[]>([]);
+  const [selMultipleDatesDlgVisibility,setSelMultipleDatesDlgVisibility] = useState(false)
 
   const reloadData = useCallback(async () => {
     setIsLoading(true);
@@ -138,7 +138,7 @@ export default function PgPurchases() {
         >
           <Icon source="check-outline" size={20} />
         </Button>
-        {(multiSelect || selectedRowId) && selectedRowIds.length>0 && (
+        {(selectedRowId || ((multiSelect || selectedRowId) && selectedRowIds.length>0)) && (
           <Menu
             visible={menuVisibility}
             onDismiss={() => setMenuVisibility(false)}
@@ -169,6 +169,7 @@ export default function PgPurchases() {
             {selectedRowId && (
               <Menu.Item
                 onPress={() => {
+                  setSelMultipleDatesDlgVisibility(true);
                 }}
                 title="Repeat"
               />
@@ -197,6 +198,30 @@ export default function PgPurchases() {
           }}
           onCancelButtonClick={() => { setDlgGroupEditVisibility(false) }}
         />)}
+        <DatePickerModal mode='multiple' visible={selMultipleDatesDlgVisibility} 
+            locale="en"
+            onDismiss={()=>{
+              setSelMultipleDatesDlgVisibility(false);
+              setMenuVisibility(false);
+            }}
+            onConfirm={async ({dates})=>{    
+              const currRow = rows.find(r=>r.Id === selectedRowId);
+              if(currRow){
+                dates.forEach(d=>{
+                  const newRow = {...currRow};
+                  newRow.Id = generatePseudoUniqueId();
+                  newRow.Date = d;
+                  rows.push(newRow);
+                });
+                const allTables = await getProperty<TAllTables>('allTables');
+                allTables.JCommon = rows;
+                await setProperty('allTables',allTables);
+                reloadData();
+              }          
+              setSelMultipleDatesDlgVisibility(false);
+              setMenuVisibility(false);
+            }}
+        />
       <View style={styles.tableWrapper}>
         <ScrollView horizontal showsHorizontalScrollIndicator>
           <View>

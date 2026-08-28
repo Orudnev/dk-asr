@@ -7,8 +7,14 @@ import { RegisterDebugAPI } from './Src/debug/debug';
 import { TestASR } from './Src/Pages/TestASR';
 import { PgAddOrEditRow } from './Src/Pages/PgAddOrEditRow';
 import { TJCommonRow } from './Src/googleDoc/types';
+import { registerTranslation, en } from 'react-native-paper-dates';
+
+registerTranslation('en', en);
+
+
 
 export type TPages = 'purchases' | 'settings' | 'addOrEditRow' | 'test';
+
 type AppContextType = {
     currPage: TPages;
     setCurrPage: (page: TPages) => void | Promise<void>;
