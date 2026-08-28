@@ -208,7 +208,7 @@ export function PgAddOrEditRow(): React.JSX.Element {
                         setDestTable(newitm);
                     }}
                 />
-                <DatePicker initialValue={date} onChange={setDate} />
+                <DatePicker value={date} onChange={setDate} />
                 <DropDownBox itemSourse={allTables?.DCItems.map(itm => itm.Name)}
                     fldStyle={[fldStyles.DCItem,fldStyles.fldMargins,borderStyle]}
                     selItem={DCItem}

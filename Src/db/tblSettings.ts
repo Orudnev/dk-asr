@@ -8,6 +8,24 @@ export const DefaultSettings = {
     allTables: {BnBish:[],BnSok:[],BnMb:[],Nal:[],JCommon:[],DCItems:[],Dest:[]} as TAllTables
 }
 
+function deserializeDates(propName:keyof typeof DefaultSettings,objValue:any){
+    const restoreDate = (obj:any,datePropNames:string[])=>{
+        datePropNames.forEach(propName =>{
+            const strValue = obj[propName];
+            const dateValue = new Date(strValue);
+            obj[propName] = dateValue;
+        })
+    }
+    switch (propName){
+        case 'allTables':
+            const tobj = objValue as TAllTables;
+            tobj.JCommon.forEach(r=>restoreDate(r,["Date","AddRowTime"]));
+            break
+        default:
+    }
+    return objValue;
+}
+
 async function createIfNotExists(db: SQLiteDatabase) {
     await db.executeSql(`
     CREATE TABLE IF NOT EXISTS Settings (
@@ -31,6 +49,7 @@ export async function getProperty<T>(propName: keyof typeof DefaultSettings): Pr
     const row = result[0].rows.item(0);
     try {
         const rv = JSON.parse(row.Content) as T;
+        deserializeDates(propName,rv)
         return rv;
     } catch {
         return defaultValue;

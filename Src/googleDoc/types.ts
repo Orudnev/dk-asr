@@ -18,6 +18,8 @@ export type TJCommonRow = Omit<TAccountRow,"Total"> & {
     AddRowTime:Date
 }
 
+
+
 export type TDCItemRow = {
     Name: string,
     Sign: number,

@@ -2,13 +2,14 @@ import React, { useCallback, useContext, useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { Appbar, Button, DataTable, Icon, Text, Checkbox, Menu } from 'react-native-paper';
 import { AppContext } from '../../App';
-import { getProperty } from '../db/tblSettings';
-import { TAllTables, TJCommonRow, TTotals } from '../googleDoc/types';
+import { getProperty, setProperty } from '../db/tblSettings';
+import { TAllTables, TJCommonRow, TMoneyAccount, TTotals } from '../googleDoc/types';
 import { getTotals, updateDataFromCloud } from '../googleDoc/helper';
 import { Pgstyle } from './pgStyle';
 import { lightGreen100, lightGreen500 } from 'react-native-paper/lib/typescript/styles/themes/v2/colors';
 import DataTableCell from 'react-native-paper/lib/typescript/components/DataTable/DataTableCell';
 import { DlgGroupEdit } from './DlgGroupEdit';
+import { dateToStr } from '../components/datepicker';
 
 export const TABLE_COLUMNS = [
   { key: 'Sum', title: 'Sum', numeric: true, width: 50 },
@@ -78,8 +79,10 @@ export default function PgPurchases() {
     const loadedRows = allTables?.JCommon.filter(r => r.Status < 3) ?? [];
     setRows(loadedRows);
     const newTotals = await getTotals();
+    setSelectedRowIds([]);
     setTotals(newTotals);
     setIsLoading(false);
+    setMenuVisibility(false);
   }, []);
 
   const loadDataFromCloud = async () => {
@@ -100,7 +103,7 @@ export default function PgPurchases() {
     const value = (row as any)[columnKey];
 
     if (columnKey === 'Date') {
-      return value ? String(value).slice(0, 10) : '';
+      return value ? dateToStr(value) : '';
     }
 
     return value == null ? '' : String(value);
@@ -116,12 +119,6 @@ export default function PgPurchases() {
   const dlgInitRow = rows.find(r => r.Id === selectedRowIds[0]);
   return (
     <View style={[Pgstyle.clientArea, styles.page]}>
-      <DlgGroupEdit show={dlgGroupEditVisibility}
-        initValues={dlgInitRow}
-        destList={destItems}
-        onApplyButtonClick={() => { }}
-        onCancelButtonClick={() => { setDlgGroupEditVisibility(false) }}
-      />
       <Appbar.Header>
         <Appbar.Action icon="cart" accessibilityLabel="Purchases" />
         <Appbar.Content title="Purchases" />
@@ -130,12 +127,18 @@ export default function PgPurchases() {
       <View style={[Pgstyle.commandButtons]}>
         <Button mode="outlined" icon="reload" onPress={loadDataFromCloud}>Reload</Button>
         <Button mode="outlined"
-          onPress={() => { setMultiSelect(!multiSelect) }}
+          onPress={() => {
+            const newValue = !multiSelect;
+            setMultiSelect(newValue);
+            if (!newValue) {
+              setSelectedRowIds([]);
+            }
+          }}
           style={multiSelect ? styles.selectedBackgrColor : undefined}
         >
           <Icon source="check-outline" size={20} />
         </Button>
-        {(multiSelect || selectedRowId) && (
+        {(multiSelect || selectedRowId) && selectedRowIds.length>0 && (
           <Menu
             visible={menuVisibility}
             onDismiss={() => setMenuVisibility(false)}
@@ -143,14 +146,18 @@ export default function PgPurchases() {
               <Button mode="outlined" onPress={() => setMenuVisibility(true)}><Icon source="menu" size={20} /></Button>
             }
           >
-            {multiSelect && (
+            {multiSelect && selectedRowIds.length>0 &&(
               <Menu.Item
-                onPress={() => {
+                onPress={async () => {
+                  const allTables = await getProperty<TAllTables>('allTables');
+                  allTables.JCommon = rows.filter(r=>!selectedRowIds.includes(r.Id));
+                  await setProperty('allTables', allTables);
+                  reloadData();
                 }}
                 title="Delete selected"
               />
             )}
-            {multiSelect && (
+            {multiSelect && selectedRowIds.length>0 && (
               <Menu.Item
                 onPress={() => {
                   setDlgGroupEditVisibility(true);
@@ -169,6 +176,27 @@ export default function PgPurchases() {
           </Menu>
         )}
       </View>
+      {dlgInitRow && (
+        <DlgGroupEdit show={dlgGroupEditVisibility}
+          initValues={dlgInitRow}
+          destList={destItems}
+          onApplyButtonClick={async (result) => {
+            selectedRowIds.forEach(selRowId => {
+              const selRow = rows.find(r => r.Id === selRowId)
+              if (selRow) {
+                if (result.account) selRow.DestTable = result.account as TMoneyAccount;
+                if (result.date) selRow.Date = result.date;
+                if (result.dest) selRow.Dest = result.dest;
+              }
+            });
+            const allTables = await getProperty<TAllTables>('allTables');
+            allTables.JCommon = rows;
+            await setProperty('allTables', allTables);
+            setDlgGroupEditVisibility(false);
+            reloadData();
+          }}
+          onCancelButtonClick={() => { setDlgGroupEditVisibility(false) }}
+        />)}
       <View style={styles.tableWrapper}>
         <ScrollView horizontal showsHorizontalScrollIndicator>
           <View>

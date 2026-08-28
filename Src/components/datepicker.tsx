@@ -3,28 +3,26 @@ import { View, Text, StyleSheet, } from "react-native";
 import DateTimePicker from '@react-native-community/datetimepicker';
 
 export type TDatePickerProps = {
-    wildCardInitialValue?:string,
-    initialValue: Date,
+    value: Date,
     onChange: (d: Date) => void
 }
 
-function toDateStr(d:Date){
+export function dateToStr(d:Date){
     const result = d.getFullYear()+"."+String(d.getMonth()+1).padStart(2,'0')+"."+String(d.getDate()).padStart(2,'0');
     return result;
 }
-function strToDate(dstr:string){
+
+export function strToDate(dstr:string){
     const date = new Date(dstr.replace(/\./g, '/'));
     return date;
 }
 
 
 export function DatePicker(props: TDatePickerProps) {
-    const [selectedDate, setSelectedDate] = useState<string>(props.wildCardInitialValue?props.wildCardInitialValue:toDateStr(props.initialValue));
     const [show, setShow] = useState(false);
     const onChange = (event: any, newDate?: Date) => {
         setShow(false);
         if (newDate) {
-            setSelectedDate(toDateStr(newDate));
             props.onChange(newDate);
         }
     };
@@ -36,11 +34,11 @@ export function DatePicker(props: TDatePickerProps) {
                     setShow(true)
                 }}
                 >
-                    {selectedDate}
+                    {dateToStr(props.value)}
             </Text>
             {show && (
                 <DateTimePicker
-                    value={selectedDate === props.wildCardInitialValue?props.initialValue:strToDate(selectedDate)}
+                    value={props.value}
                     mode="date"
                     display="default"
                     onChange={onChange}
