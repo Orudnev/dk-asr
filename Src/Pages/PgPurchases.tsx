@@ -58,6 +58,45 @@ export function getColumnTextStyle(column: (typeof TABLE_COLUMNS)[number]) {
   return !column.numeric ? styles.leftAlignedText : undefined;
 }
 
+export function SortJCommonRows(a: TJCommonRow, b: TJCommonRow, sortColumns: TColumnOrder[]) {
+  let result = 0;
+  const columns = sortColumns.sort((a: TColumnOrder, b: TColumnOrder) => a.colNumber - b.colNumber);
+  const sortFunc = (a: TJCommonRow, b: TJCommonRow, sortField: TColumnOrder) => {
+    let sortFuncResult = 0;
+    const flda = (a as any)[sortField.columnKey];
+    const fldb = (b as any)[sortField.columnKey];
+    const fldType = typeof (flda);
+    switch (fldType) {
+      case 'string':
+        if (sortField.order == 'asc') {
+          sortFuncResult = (flda as string).localeCompare(fldb as string, "ru");
+        } else {
+          sortFuncResult = (fldb as string).localeCompare(flda as string, "ru");
+        }
+        break;
+      default:
+        if (sortField.order == 'asc') {
+          sortFuncResult = (flda as any) - (fldb as any);
+        } else {
+          sortFuncResult = (fldb as any) - (flda as any);
+        }
+    }
+    return sortFuncResult;
+  };
+
+  if (sortColumns.length === 1) {
+    return sortFunc(a, b, sortColumns[0]);
+  }
+  for (let i = 0; i < columns.length; i++) {
+    const currSortField = columns[i];
+    result = sortFunc(a, b, currSortField);
+    if (result != 0) {
+      break;
+    }
+  }
+  return result;
+}
+
 type TOrder = 'asc' | 'desc';
 type TColumnOrder = {
   columnKey: string,
@@ -107,6 +146,15 @@ export default function PgPurchases() {
     reloadData();
   }, [appContext?.currPage, reloadData]);
 
+
+
+  useEffect(() => {
+    const newRows = [...rows];
+    newRows.sort((a, b) => SortJCommonRows(a, b, columnSortOrderList));
+    setRows(newRows);
+  }, [columnSortOrderList]);
+
+
   function formatCellValue(row: TJCommonRow, columnKey: (typeof TABLE_COLUMNS)[number]['key']) {
     const value = (row as any)[columnKey];
 
@@ -154,7 +202,7 @@ export default function PgPurchases() {
   }
 
   function handleColumnHeaderPress(columnKey: string) {
-    if (!multiSelect) {
+    if (!isMultiColumnSort) {
       if (columnSortOrderList.length == 0) {
         setColumnSortOrderList([{ columnKey: columnKey, colNumber: 1, order: 'asc' }]);
         return;
