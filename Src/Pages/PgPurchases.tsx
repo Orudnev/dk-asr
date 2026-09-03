@@ -78,7 +78,7 @@ export default function PgPurchases() {
   const [destItems, setDestItems] = useState<string[]>([]);
   const [selMultipleDatesDlgVisibility, setSelMultipleDatesDlgVisibility] = useState(false)
   const [columnSortOrderList, setColumnSortOrderList] = useState<TColumnOrder[]>([]);
-  const [isMultiColumnSort,setIsMultiColumnSort] = useState(false);
+  const [isMultiColumnSort, setIsMultiColumnSort] = useState(false);
 
   const reloadData = useCallback(async () => {
     setIsLoading(true);
@@ -127,13 +127,13 @@ export default function PgPurchases() {
   function getColumnOrderIcon(columnKey: string) {
     const orderItem = columnSortOrderList.find(oitm => oitm.columnKey == columnKey);
     const iconSize = 12;
-    const stl = {marginRight:5}
+    const stl = { marginRight: 5 }
     if (!orderItem) return null;
     const numberIconName = `numeric-${orderItem.colNumber}-circle-outline`
-    const numberIcon = isMultiColumnSort 
+    const numberIcon = isMultiColumnSort
       ? (
-          <Icon source={numberIconName} size={iconSize} />
-      ) 
+        <Icon source={numberIconName} size={iconSize} />
+      )
       : (
         null
       );
@@ -154,14 +154,39 @@ export default function PgPurchases() {
   }
 
   function handleColumnHeaderPress(columnKey: string) {
+    if (!multiSelect) {
+      if (columnSortOrderList.length == 0) {
+        setColumnSortOrderList([{ columnKey: columnKey, colNumber: 1, order: 'asc' }]);
+        return;
+      }
+      if (columnSortOrderList[0].columnKey === columnKey) {
+        if (columnSortOrderList[0].order == 'asc') {
+          setColumnSortOrderList([{ columnKey: columnKey, colNumber: 1, order: 'desc' }]);
+          return;
+        }
+        if (columnSortOrderList[0].order == 'desc') {
+          setColumnSortOrderList([]);
+          return;
+        }
+      } else {
+        setColumnSortOrderList([{ columnKey: columnKey, colNumber: 1, order: 'asc' }]);
+        return;
+      }
+    }
     let newColumnOrderList = [...columnSortOrderList];
     const orderItem = newColumnOrderList.find(oitm => oitm.columnKey == columnKey);
     if (orderItem) {
       if (orderItem.order == 'asc') {
         orderItem.order = 'desc';
       } else {
+        const selectedColNumber = orderItem.colNumber;
         newColumnOrderList = newColumnOrderList.filter(x => x.columnKey != orderItem.columnKey)
-        newColumnOrderList.forEach(itm => itm.colNumber--);
+        newColumnOrderList.forEach(itm => {
+          if (itm.colNumber < selectedColNumber) {
+            return;
+          }
+          itm.colNumber--;
+        });
       }
     } else {
       newColumnOrderList.push({ columnKey: columnKey, colNumber: newColumnOrderList.length + 1, order: 'asc' });
@@ -195,7 +220,7 @@ export default function PgPurchases() {
         </Button>
         {(selectedRowId || ((multiSelect || selectedRowId) && selectedRowIds.length > 0)) && (
           <Menu
-            style = {styles.menuContainer}
+            style={styles.menuContainer}
             visible={menuVisibility}
             onDismiss={() => setMenuVisibility(false)}
             anchor={
@@ -230,16 +255,16 @@ export default function PgPurchases() {
                 title="Repeat"
               />
             )}
-            <Menu.Item title="Multi Column Sorting" titleStyle={menuTitleStyle} style={styles.menuItem}
-              onPress={()=> {
+            <Menu.Item title="Multi Column Sorting" titleStyle={[menuTitleStyleCheckBox]} style={styles.menuItem}
+              onPress={() => {
                 const newMultiColumnSort = !isMultiColumnSort
                 setIsMultiColumnSort(newMultiColumnSort);
                 setMenuVisibility(false);
-                if(!newMultiColumnSort){
+                if (!newMultiColumnSort) {
                   setColumnSortOrderList([]);
                 }
               }}
-              leadingIcon = {() => (
+              leadingIcon={() => (
                 <Checkbox status={isMultiColumnSort ? 'checked' : 'unchecked'} />
               )}
             />
@@ -322,7 +347,7 @@ export default function PgPurchases() {
                     textStyle={getColumnTextStyle(column)}
                     onPress={() => handleColumnHeaderPress(column.key)}
                   >
-                    <View style={{flex:1, flexDirection:'row', alignItems:'center'}}>
+                    <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
                       {getColumnOrderIcon(column.key)}
                       <Text>{column.title}</Text>
                     </View>
@@ -429,21 +454,27 @@ const styles = StyleSheet.create({
   selectedBackgrColor: {
     backgroundColor: '#3eac44'
   },
-  menuContainer:{
+  menuContainer: {
     borderWidth: 1,
     borderColor: '#d0d0d0',
     borderRadius: 8,
-    backgroundColor:'rgba(0,0,0,0.5)',
-    padding:5
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    padding: 5
   },
-  menuItem:{
-    borderBottomWidth:1,
-    borderBottomColor:'#636262',
+  menuItem: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#636262',
   },
 
 });
 
-const menuTitleStyle:StyleProp<TextStyle> = {
-  textAlign:'right',
-  minWidth:180,
+const menuTitleStyle: StyleProp<TextStyle> = {
+  textAlign: 'right',
+  width: 180,
+  marginLeft: 31,
+}
+
+const menuTitleStyleCheckBox: StyleProp<TextStyle> = {
+  textAlign: 'right',
+  width: 180,
 }
