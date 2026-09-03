@@ -1,5 +1,5 @@
 import React, { useCallback, useContext, useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleProp, StyleSheet, TextStyle, View } from 'react-native';
 import { Appbar, Button, DataTable, Icon, Text, Checkbox, Menu } from 'react-native-paper';
 import { AppContext } from '../../App';
 import { getProperty, setProperty } from '../db/tblSettings';
@@ -8,12 +8,12 @@ import { generatePseudoUniqueId, getTotals, updateDataFromCloud } from '../googl
 import { Pgstyle } from './pgStyle';
 import { DlgGroupEdit } from './DlgGroupEdit';
 import { dateToStr } from '../components/datepicker';
-import { DatePickerModal} from 'react-native-paper-dates';
+import { DatePickerModal } from 'react-native-paper-dates';
 
 export const TABLE_COLUMNS = [
   { key: 'Sum', title: 'Sum', numeric: true, width: 50 },
   { key: 'Description', title: 'Description', numeric: false, width: 120 },
-  { key: 'DestTable', title: 'DstTbl', numeric: false, width: 50 },
+  { key: 'DestTable', title: 'DstTbl', numeric: false, width: 65 },
   { key: 'Date', title: 'Date', numeric: false, width: 80 },
   { key: 'DCItem', title: 'DCItem', numeric: false, width: 120 },
   { key: 'Dest', title: 'Dest', numeric: false, width: 100 },
@@ -48,7 +48,7 @@ function Totals(props: TTotals) {
 export function getColumnStyle(column: (typeof TABLE_COLUMNS)[number]) {
   return [
     styles.column,
-    { width: column.width },
+    { width: column.width, maxWidth: column.width },
     !column.numeric && styles.textColumn,
     column.numeric && styles.numberColumn
   ];
@@ -58,6 +58,12 @@ export function getColumnTextStyle(column: (typeof TABLE_COLUMNS)[number]) {
   return !column.numeric ? styles.leftAlignedText : undefined;
 }
 
+type TOrder = 'asc' | 'desc';
+type TColumnOrder = {
+  columnKey: string,
+  colNumber: number,
+  order: TOrder
+}
 export default function PgPurchases() {
   const appContext = useContext(AppContext);
   const [isLoasing, setIsLoading] = useState(false);
@@ -70,7 +76,9 @@ export default function PgPurchases() {
   const [menuVisibility, setMenuVisibility] = useState(false);
   const [dlgGroupEditVisibility, setDlgGroupEditVisibility] = useState(false);
   const [destItems, setDestItems] = useState<string[]>([]);
-  const [selMultipleDatesDlgVisibility,setSelMultipleDatesDlgVisibility] = useState(false)
+  const [selMultipleDatesDlgVisibility, setSelMultipleDatesDlgVisibility] = useState(false)
+  const [columnSortOrderList, setColumnSortOrderList] = useState<TColumnOrder[]>([]);
+  const [isMultiColumnSort,setIsMultiColumnSort] = useState(false);
 
   const reloadData = useCallback(async () => {
     setIsLoading(true);
@@ -116,6 +124,53 @@ export default function PgPurchases() {
     }
   }
 
+  function getColumnOrderIcon(columnKey: string) {
+    const orderItem = columnSortOrderList.find(oitm => oitm.columnKey == columnKey);
+    const iconSize = 12;
+    const stl = {marginRight:5}
+    if (!orderItem) return null;
+    const numberIconName = `numeric-${orderItem.colNumber}-circle-outline`
+    const numberIcon = isMultiColumnSort 
+      ? (
+          <Icon source={numberIconName} size={iconSize} />
+      ) 
+      : (
+        null
+      );
+    if (orderItem.order == 'asc') {
+      return (
+        <View style={stl}>
+          <Icon source="arrow-up-thin" size={iconSize} />
+          {numberIcon}
+        </View>
+      );
+    }
+    return (
+      <View style={stl} >
+        <Icon source="arrow-down-thin" size={iconSize} />
+        {numberIcon}
+      </View>
+    );
+  }
+
+  function handleColumnHeaderPress(columnKey: string) {
+    let newColumnOrderList = [...columnSortOrderList];
+    const orderItem = newColumnOrderList.find(oitm => oitm.columnKey == columnKey);
+    if (orderItem) {
+      if (orderItem.order == 'asc') {
+        orderItem.order = 'desc';
+      } else {
+        newColumnOrderList = newColumnOrderList.filter(x => x.columnKey != orderItem.columnKey)
+        newColumnOrderList.forEach(itm => itm.colNumber--);
+      }
+    } else {
+      newColumnOrderList.push({ columnKey: columnKey, colNumber: newColumnOrderList.length + 1, order: 'asc' });
+    }
+    setColumnSortOrderList(newColumnOrderList);
+  }
+
+
+
   const dlgInitRow = rows.find(r => r.Id === selectedRowIds[0]);
   return (
     <View style={[Pgstyle.clientArea, styles.page]}>
@@ -138,26 +193,27 @@ export default function PgPurchases() {
         >
           <Icon source="check-outline" size={20} />
         </Button>
-        {(selectedRowId || ((multiSelect || selectedRowId) && selectedRowIds.length>0)) && (
+        {(selectedRowId || ((multiSelect || selectedRowId) && selectedRowIds.length > 0)) && (
           <Menu
+            style = {styles.menuContainer}
             visible={menuVisibility}
             onDismiss={() => setMenuVisibility(false)}
             anchor={
               <Button mode="outlined" onPress={() => setMenuVisibility(true)}><Icon source="menu" size={20} /></Button>
             }
           >
-            {multiSelect && selectedRowIds.length>0 &&(
+            {multiSelect && selectedRowIds.length > 0 && (
               <Menu.Item
                 onPress={async () => {
                   const allTables = await getProperty<TAllTables>('allTables');
-                  allTables.JCommon = rows.filter(r=>!selectedRowIds.includes(r.Id));
+                  allTables.JCommon = rows.filter(r => !selectedRowIds.includes(r.Id));
                   await setProperty('allTables', allTables);
                   reloadData();
                 }}
                 title="Delete selected"
               />
             )}
-            {multiSelect && selectedRowIds.length>0 && (
+            {multiSelect && selectedRowIds.length > 0 && (
               <Menu.Item
                 onPress={() => {
                   setDlgGroupEditVisibility(true);
@@ -167,13 +223,27 @@ export default function PgPurchases() {
               />
             )}
             {selectedRowId && (
-              <Menu.Item
+              <Menu.Item titleStyle={menuTitleStyle} style={styles.menuItem}
                 onPress={() => {
                   setSelMultipleDatesDlgVisibility(true);
                 }}
                 title="Repeat"
               />
             )}
+            <Menu.Item title="Multi Column Sorting" titleStyle={menuTitleStyle} style={styles.menuItem}
+              onPress={()=> {
+                const newMultiColumnSort = !isMultiColumnSort
+                setIsMultiColumnSort(newMultiColumnSort);
+                setMenuVisibility(false);
+                if(!newMultiColumnSort){
+                  setColumnSortOrderList([]);
+                }
+              }}
+              leadingIcon = {() => (
+                <Checkbox status={isMultiColumnSort ? 'checked' : 'unchecked'} />
+              )}
+            />
+
           </Menu>
         )}
       </View>
@@ -198,30 +268,30 @@ export default function PgPurchases() {
           }}
           onCancelButtonClick={() => { setDlgGroupEditVisibility(false) }}
         />)}
-        <DatePickerModal mode='multiple' visible={selMultipleDatesDlgVisibility} 
-            locale="en"
-            onDismiss={()=>{
-              setSelMultipleDatesDlgVisibility(false);
-              setMenuVisibility(false);
-            }}
-            onConfirm={async ({dates})=>{    
-              const currRow = rows.find(r=>r.Id === selectedRowId);
-              if(currRow){
-                dates.forEach(d=>{
-                  const newRow = {...currRow};
-                  newRow.Id = generatePseudoUniqueId();
-                  newRow.Date = d;
-                  rows.push(newRow);
-                });
-                const allTables = await getProperty<TAllTables>('allTables');
-                allTables.JCommon = rows;
-                await setProperty('allTables',allTables);
-                reloadData();
-              }          
-              setSelMultipleDatesDlgVisibility(false);
-              setMenuVisibility(false);
-            }}
-        />
+      <DatePickerModal mode='multiple' visible={selMultipleDatesDlgVisibility}
+        locale="en"
+        onDismiss={() => {
+          setSelMultipleDatesDlgVisibility(false);
+          setMenuVisibility(false);
+        }}
+        onConfirm={async ({ dates }) => {
+          const currRow = rows.find(r => r.Id === selectedRowId);
+          if (currRow) {
+            dates.forEach(d => {
+              const newRow = { ...currRow };
+              newRow.Id = generatePseudoUniqueId();
+              newRow.Date = d;
+              rows.push(newRow);
+            });
+            const allTables = await getProperty<TAllTables>('allTables');
+            allTables.JCommon = rows;
+            await setProperty('allTables', allTables);
+            reloadData();
+          }
+          setSelMultipleDatesDlgVisibility(false);
+          setMenuVisibility(false);
+        }}
+      />
       <View style={styles.tableWrapper}>
         <ScrollView horizontal showsHorizontalScrollIndicator>
           <View>
@@ -249,8 +319,13 @@ export default function PgPurchases() {
                     key={column.key}
                     numeric={column.numeric}
                     style={getColumnStyle(column)}
-                    textStyle={getColumnTextStyle(column)}>
-                    {column.title}
+                    textStyle={getColumnTextStyle(column)}
+                    onPress={() => handleColumnHeaderPress(column.key)}
+                  >
+                    <View style={{flex:1, flexDirection:'row', alignItems:'center'}}>
+                      {getColumnOrderIcon(column.key)}
+                      <Text>{column.title}</Text>
+                    </View>
                   </DataTable.Title>
                 ))}
               </DataTable.Header>
@@ -304,6 +379,7 @@ export default function PgPurchases() {
   );
 }
 
+
 const styles = StyleSheet.create({
   page: {
     flex: 1,
@@ -352,5 +428,22 @@ const styles = StyleSheet.create({
   },
   selectedBackgrColor: {
     backgroundColor: '#3eac44'
-  }
+  },
+  menuContainer:{
+    borderWidth: 1,
+    borderColor: '#d0d0d0',
+    borderRadius: 8,
+    backgroundColor:'rgba(0,0,0,0.5)',
+    padding:5
+  },
+  menuItem:{
+    borderBottomWidth:1,
+    borderBottomColor:'#636262',
+  },
+
 });
+
+const menuTitleStyle:StyleProp<TextStyle> = {
+  textAlign:'right',
+  minWidth:180,
+}
