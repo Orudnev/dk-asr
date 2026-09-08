@@ -9,6 +9,7 @@ import { Pgstyle } from './pgStyle';
 import { DlgGroupEdit } from './DlgGroupEdit';
 import { dateToStr } from '../components/datepicker';
 import { DatePickerModal } from 'react-native-paper-dates';
+import { Commit, UploadJCommon } from '../helpers/webApiWrapper';
 
 export const TABLE_COLUMNS = [
   { key: 'Sum', title: 'Sum', numeric: true, width: 50 },
@@ -50,8 +51,14 @@ export function getColumnStyle(column: (typeof TABLE_COLUMNS)[number]) {
     styles.column,
     { width: column.width, maxWidth: column.width },
     !column.numeric && styles.textColumn,
-    column.numeric && styles.numberColumn
+    column.numeric && styles.numberColumn,
   ];
+}
+
+export function getRowStyle(row: TJCommonRow) {
+  if (row.Status === 2) {
+    return styles.processedRow;
+  }
 }
 
 export function getColumnTextStyle(column: (typeof TABLE_COLUMNS)[number]) {
@@ -97,6 +104,8 @@ export function SortJCommonRows(a: TJCommonRow, b: TJCommonRow, sortColumns: TCo
   return result;
 }
 
+type TPgMode = 'Loading' | 'Uploading' | 'Committing' | 'Error' | 'None';
+
 type TOrder = 'asc' | 'desc';
 type TColumnOrder = {
   columnKey: string,
@@ -105,7 +114,7 @@ type TColumnOrder = {
 }
 export default function PgPurchases() {
   const appContext = useContext(AppContext);
-  const [isLoasing, setIsLoading] = useState(false);
+  const [pgMode, setPgMode] = useState<TPgMode>('None');
   const [rows, setRows] = useState<TJCommonRow[]>([]);
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
   const [totals, setTotals] = useState<TTotals>({ BnBish: 0, BnSok: 0, BnMb: 0, Nal: 0 });
@@ -120,7 +129,7 @@ export default function PgPurchases() {
   const [isMultiColumnSort, setIsMultiColumnSort] = useState(false);
 
   const reloadData = useCallback(async () => {
-    setIsLoading(true);
+    setPgMode('Loading');
     const allTables = await getProperty<TAllTables>('allTables');
     setDestItems(allTables.Dest);
     const loadedRows = allTables?.JCommon.filter(r => r.Status < 3) ?? [];
@@ -128,12 +137,12 @@ export default function PgPurchases() {
     const newTotals = await getTotals();
     setSelectedRowIds([]);
     setTotals(newTotals);
-    setIsLoading(false);
+    setPgMode('None');
     setMenuVisibility(false);
   }, []);
 
   const loadDataFromCloud = async () => {
-    setIsLoading(true);
+    setPgMode('Loading');
     await updateDataFromCloud();
     reloadData();
   };
@@ -266,7 +275,7 @@ export default function PgPurchases() {
         >
           <Icon source="check-outline" size={20} />
         </Button>
-        {(selectedRowId || ((multiSelect || selectedRowId) && selectedRowIds.length > 0)) && (
+        {(
           <Menu
             style={styles.menuContainer}
             visible={menuVisibility}
@@ -283,7 +292,7 @@ export default function PgPurchases() {
                   await setProperty('allTables', allTables);
                   reloadData();
                 }}
-                title="Delete selected"
+                title="Delete selected" titleStyle={menuTitleStyle}
               />
             )}
             {multiSelect && selectedRowIds.length > 0 && (
@@ -292,7 +301,7 @@ export default function PgPurchases() {
                   setDlgGroupEditVisibility(true);
                   setMenuVisibility(false);
                 }}
-                title="Group edit"
+                title="Group edit" titleStyle={menuTitleStyle}
               />
             )}
             {selectedRowId && (
@@ -316,6 +325,26 @@ export default function PgPurchases() {
                 <Checkbox status={isMultiColumnSort ? 'checked' : 'unchecked'} />
               )}
             />
+            {rows.some(r => r.Status === 0) && (
+              <Menu.Item title="Upload and commit" titleStyle={[menuTitleStyle]} style={styles.menuItem}
+                onPress={async () => {
+                  setMenuVisibility(false);
+                  setPgMode('Uploading');
+                  const result = await UploadJCommon();
+                  if (result.success) {
+                    setPgMode('Committing');
+                    await Commit();
+                    reloadData();
+                    return;
+                  }
+                  setPgMode('Error');
+                  setTimeout(() => {
+                    setPgMode('None');
+                  }, 2000);
+
+                }}
+              />
+            )}
 
           </Menu>
         )}
@@ -431,7 +460,7 @@ export default function PgPurchases() {
                         key={column.key}
                         numeric={column.numeric}
                         style={getColumnStyle(column)}
-                        textStyle={getColumnTextStyle(column)}>
+                        textStyle={[getColumnTextStyle(column), getRowStyle(row)]}>
                         {formatCellValue(row, column.key)}
                       </DataTable.Cell>
                     ))}
@@ -442,9 +471,9 @@ export default function PgPurchases() {
           </View>
         </ScrollView>
       </View>
-      {isLoasing && (
+      {pgMode !== 'None' && (
         <View style={[Pgstyle.overlay]} >
-          <Text style={[{ fontSize: 30 }]}>Loading...</Text>
+          <Text style={[{ fontSize: 30 }]}>{pgMode}...</Text>
         </View>
       )
       }
@@ -475,6 +504,9 @@ const styles = StyleSheet.create({
   },
   numberColumn: {
     marginRight: 10
+  },
+  processedRow: {
+    color: '#636666'
   },
   leftAlignedText: {
     textAlign: 'left',
