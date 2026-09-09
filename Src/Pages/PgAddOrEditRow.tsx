@@ -127,6 +127,13 @@ export function PgAddOrEditRow(): React.JSX.Element {
             finalList = finalList.filter(r => r.Sum === parseInt(searchSum));
         }
         setSearchResultRows(finalList);
+        if(finalList.length>0){
+            setDCItem(finalList[0].DCItem);
+            setDescription(searchDescript);
+        } else {
+            setSum(searchSum);
+            setDescription(searchDescript);
+        }
     }
 
     const handleOnDataGridRowSelected = (rowId: string) => {
