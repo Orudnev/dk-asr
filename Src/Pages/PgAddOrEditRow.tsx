@@ -68,12 +68,13 @@ export function PgAddOrEditRow(): React.JSX.Element {
     const [date, setDate] = useState<Date>(new Date());
     const [DCItem, setDCItem] = useState("Прод");
     const [dest, setDest] = useState("Биш");
-    const [description, setDescription] = useState("Blablablablab");
-    const [sum, setSum] = useState((100500).toString());
+    const [description, setDescription] = useState("");
+    const [sum, setSum] = useState("0");
     const [allTables, setAllTables] = useState<TAllTables | null>(null);
     const [allAccTableRows, setAllAccTableRows] = useState<TJCommonRow[]>([]);
     const [searchResultRows, setSearchResultRows] = useState<TJCommonRow[]>([]);
     const [editMode, setEditMode] = useState(false);
+    const [internalTransferDestination, setInternalTransferDestination] = useState("");
     useEffect(() => {
         const loadTables = async () => {
             const data = await getProperty<TAllTables>('allTables');
@@ -97,6 +98,7 @@ export function PgAddOrEditRow(): React.JSX.Element {
             setDest(appContext.currRow.Dest);
             setSum(appContext.currRow.Sum.toString());
             setDescription(appContext.currRow.Description);
+            setInternalTransferDestination(appContext.currRow.Dest);
         }
 
     }, [appContext?.currPage])
@@ -192,6 +194,25 @@ export function PgAddOrEditRow(): React.JSX.Element {
         Keyboard.dismiss();
     }
     const searchGridHeight = editMode ? 50 : 250;
+
+    const isInternalTransfer = DCItem === "Внутр.перевод";
+    const calcInternalTransferFields = (from:string,to:string)=>{
+        if(!isInternalTransfer){
+            return;
+        }
+        if(from){
+            setDestTable(from as TMoneyAccount);
+        } else {
+            from = destTable;
+        }
+        if(to){
+            setInternalTransferDestination(to);
+            setDest(to);
+        } else {
+            to = dest;
+        }
+        setDescription(`${from} => ${to}`)
+    }
     return (
         <SafeAreaView>
             <View style={[{ display: 'flex', flexDirection: 'row', marginRight: 10 }, { ...fldStyles.fldMargins, ...borderStyle }]}>
@@ -213,8 +234,19 @@ export function PgAddOrEditRow(): React.JSX.Element {
                     selItem={destTable}
                     onChange={(newitm) => {
                         setDestTable(newitm);
+                        calcInternalTransferFields(newitm,"");
                     }}
                 />
+                {isInternalTransfer &&(
+                    <DropDownBox itemSourse={MoneyAccounts.filter(itm=>itm!=destTable)}
+                        fldStyle={[fldStyles.destTable,fldStyles.fldMargins,borderStyle]}
+                        selItem={internalTransferDestination}
+                        onChange={(newitm) => {
+                            setInternalTransferDestination(newitm);
+                            calcInternalTransferFields("",newitm);
+                        }}
+                    />
+                )}
                 <DatePicker value={date} onChange={setDate} />
                 <DropDownBox itemSourse={allTables?.DCItems.map(itm => itm.Name)}
                     fldStyle={[fldStyles.DCItem,fldStyles.fldMargins,borderStyle]}
@@ -223,13 +255,15 @@ export function PgAddOrEditRow(): React.JSX.Element {
                         setDCItem(newitm);
                     }}
                 />
-                <DropDownBox itemSourse={allTables?.Dest}
-                    fldStyle={[fldStyles.Dest,fldStyles.fldMargins,borderStyle]}
-                    selItem={dest}
-                    onChange={(newitm) => {
-                        setDest(newitm);
-                    }}
-                />
+                {!isInternalTransfer && (
+                    <DropDownBox itemSourse={allTables?.Dest}
+                        fldStyle={[fldStyles.Dest,fldStyles.fldMargins,borderStyle]}
+                        selItem={dest}
+                        onChange={(newitm) => {
+                            setDest(newitm);
+                        }}
+                    />
+                )}
                 <View style={{ display: 'flex', flexDirection: 'row' }}>
                     <View style={{ ...fldStyles.Sum, ...fldStyles.fldMargins, ...borderStyle }}>
                         <TextInput style={styles.value} value={sum.toString()}
@@ -275,7 +309,7 @@ const fldStyles = StyleSheet.create({
     },
 
     DCItem: {
-        width: 195
+        width: 170
     },
     Dest: {
         width: 140
